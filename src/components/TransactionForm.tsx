@@ -235,7 +235,7 @@ export function TransactionForm({
 
           {/* Actions */}
           <div className="flex gap-3 pt-4">
-            {isEditing && onDelete && !transaction?.isTithe && (
+            {isEditing && onDelete && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button type="button" variant="destructive" size="icon">

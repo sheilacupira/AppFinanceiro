@@ -55,10 +55,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
 
   useEffect(() => {
-    if (!hasSampleData()) {
-      loadSampleData();
-      setData(loadData());
-    }
+    // Dados de amostra desabilitados - começar vazio
+    // if (!hasSampleData()) {
+    //   loadSampleData();
+    //   setData(loadData());
+    // }
   }, []);
 
   useEffect(() => {
