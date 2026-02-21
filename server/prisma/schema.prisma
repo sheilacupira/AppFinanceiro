@@ -1,0 +1,160 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  fullName      String
+  passwordHash  String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  memberships   Membership[]
+  refreshTokens RefreshToken[]
+}
+
+model Tenant {
+  id            String         @id @default(cuid())
+  name          String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  memberships   Membership[]
+  refreshTokens RefreshToken[]
+  transactions  FinanceTransaction[]
+  recurrences   FinanceRecurrence[]
+  categories    FinanceCategory[]
+  settings      FinanceSettings?
+}
+
+model Membership {
+  id        String         @id @default(cuid())
+  userId    String
+  tenantId  String
+  role      MembershipRole @default(MEMBER)
+  createdAt DateTime       @default(now())
+
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  tokenId   String   @unique
+  userId    String
+  tenantId  String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+enum FinanceTransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum FinanceTransactionStatus {
+  PAID
+  PENDING
+}
+
+enum FinanceRecurrenceFrequency {
+  MONTHLY
+}
+
+enum FinanceCategoryType {
+  INCOME
+  EXPENSE
+  BOTH
+}
+
+enum FinanceTheme {
+  LIGHT
+  DARK
+  SYSTEM
+}
+
+model FinanceTransaction {
+  id          String
+  tenantId    String
+  type        FinanceTransactionType
+  amount      Float
+  date        DateTime
+  description String
+  categoryId  String
+  source      String?
+  status      FinanceTransactionStatus
+  isRecurring Boolean                  @default(false)
+  recurrenceId String?
+  isTithe     Boolean?
+  importBatchId String?                 // Tracks which import batch this came from
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+
+  tenant      Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, id])
+  @@index([tenantId, date])
+  @@index([tenantId, importBatchId])
+}
+
+model FinanceRecurrence {
+  id             String
+  tenantId       String
+  type           FinanceTransactionType
+  amount         Float
+  description    String
+  categoryId     String
+  source         String?
+  frequency      FinanceRecurrenceFrequency @default(MONTHLY)
+  startDate      DateTime
+  isActive       Boolean                    @default(true)
+  createAsPending Boolean                   @default(false)
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+
+  tenant         Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, id])
+  @@index([tenantId])
+}
+
+model FinanceCategory {
+  id        String
+  tenantId  String
+  name      String
+  type      FinanceCategoryType
+  icon      String?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  tenant    Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, id])
+  @@index([tenantId])
+}
+
+model FinanceSettings {
+  tenantId  String      @id
+  isTither  Boolean     @default(false)
+  theme     FinanceTheme @default(SYSTEM)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  tenant    Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
