@@ -7,6 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { BackupManager } from '@/components/BackupManager';
 import { StatementImportManager } from '@/components/StatementImportManager';
+import { BankConnectionManager } from '@/components/BankConnectionManager';
 
 export function SettingsPage() {
   const { data, updateSettings } = useFinance();
@@ -74,6 +75,14 @@ export function SettingsPage() {
 
       {/* Statement Import */}
       <StatementImportManager />
+
+      {/* Open Finance */}
+      <div className="bg-card rounded-lg border border-border p-6">
+        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+          🏦 Open Finance / Conexões Bancárias
+        </h2>
+        <BankConnectionManager />
+      </div>
 
       {isSaasMode && session && (
         <div className="bg-card rounded-lg border border-border p-4 space-y-3">
