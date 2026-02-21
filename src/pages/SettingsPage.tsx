@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { BackupManager } from '@/components/BackupManager';
 import { StatementImportManager } from '@/components/StatementImportManager';
 import { BankConnectionManager } from '@/components/BankConnectionManager';
+import { BillingManager } from '@/components/BillingManager';
 
 export function SettingsPage() {
   const { data, updateSettings } = useFinance();
@@ -78,11 +79,15 @@ export function SettingsPage() {
 
       {/* Open Finance */}
       <div className="bg-card rounded-lg border border-border p-6">
-        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-          🏦 Open Finance / Conexões Bancárias
-        </h2>
         <BankConnectionManager />
       </div>
+
+      {/* Billing */}
+      {isSaasMode && session && (
+        <div className="bg-card rounded-lg border border-border p-6">
+          <BillingManager userId={session.user.email} />
+        </div>
+      )}
 
       {isSaasMode && session && (
         <div className="bg-card rounded-lg border border-border p-4 space-y-3">
