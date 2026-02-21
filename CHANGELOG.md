@@ -1,6 +1,41 @@
-# 🔄 Changelog - O Que Foi Modificado
+# 🔄 Changelog
 
-## Novembro 2024 - Preparação PWA
+## 21 de fevereiro de 2026 — Alinhamento de documentação
+
+### 📚 Documentação consolidada
+- README atualizado para refletir arquitetura híbrida (local-first + SaaS)
+- Guias `QUICK_START.md`, `QUICK_DEPLOY.md`, `DEPLOYMENT.md` e `PRODUCAO.md` padronizados
+- `SUMMARY.md` reescrito com status real por módulo
+
+### ✅ Ajustes de consistência
+- Removidas afirmações antigas de “sem backend” nos documentos principais
+- Unificado fluxo de setup com `.env.example` (frontend e backend)
+- Clarificado status de Open Finance como parcial (com mock/fallback)
+
+---
+
+## Fevereiro 2026 — Funcionalidades SaaS e Finance
+
+### ✅ Billing Stripe (backend real)
+- Checkout de assinatura
+- Consulta/cancelamento/reativação/troca de plano
+- Invoices e payment methods
+- Customer portal
+- Webhook Stripe
+
+### ✅ Open Finance (base implementada)
+- Estrutura Pluggy no frontend
+- Gestão de conexões bancárias
+- Fallback em modo mock
+
+### ✅ Importação e inteligência financeira
+- Importação de extrato OFX/CSV
+- Deduplicação de lançamentos
+- Auto-categorização com fuzzy matching
+
+---
+
+## Janeiro 2026 — Preparação PWA
 
 ### 📦 Dependências Adicionadas
 ```json

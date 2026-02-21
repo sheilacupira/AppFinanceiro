@@ -5,7 +5,7 @@
 O projeto **Financeiro** foi preparado como Progressive Web App (PWA) com as seguintes características:
 
 - ✅ **Offline-first**: Todos os dados são salvos localmente no navegador (IndexedDB/LocalStorage)
-- ✅ **Sem Backend**: Funciona completamente independente de servidores
+- ✅ **Modo local-first**: Funciona sem backend no cenário PWA standalone
 - ✅ **Service Worker**: Cache automático de arquivos para funcionamento offline
 - ✅ **Instalável**: Pode ser instalado em smartphones, tablets e desktops
 - ✅ **Sincronização**: Funciona em múltiplos dispositivos (com exportação/importação de dados)
@@ -183,6 +183,6 @@ dist/
 
 ---
 
-**Versão**: 1.0  
-**Data**: 2 de Janeiro de 2026  
-**Status**: ✅ Pronto para produção
+**Versão**: 1.1  
+**Data**: 21 de Fevereiro de 2026  
+**Status**: ✅ Revisado e alinhado

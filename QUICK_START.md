@@ -1,101 +1,59 @@
-# ⚡ Guia Rápido: Instalar em Outro Dispositivo (30 segundos)
+# ⚡ Início Rápido
 
-## 🎯 3 Passos Simples
+Guia curto para subir o projeto no modo que você precisa.
 
-### Passo 1️⃣: Preparar no Computador
+## 1) Rodar apenas o frontend (local-first)
+
 ```bash
-cd /Users/macos/Downloads/pocket-ledger-main
+npm install
+npm run dev
+```
 
-# Compilar (primeira vez leva 5 segundos)
+Acesse em `http://localhost:8080`.
+
+## 2) Rodar frontend + backend (SaaS)
+
+### Terminal A (backend)
+```bash
+cd server
+npm install
+cp .env.example .env
+npm run prisma:migrate
+npm run dev
+```
+
+### Terminal B (frontend)
+```bash
+cd ..
+npm install
+npm run dev
+```
+
+## 3) Build para produção (frontend)
+
+```bash
 npm run build
-
-# Servir
 ./serve-pwa.sh
 ```
 
-Você verá algo como:
-```
-Available on:
-  http://127.0.0.1:3000
-  http://192.168.3.11:3000  ← USE ESTE!
-```
+Use o endereço de rede exibido para instalar em outro dispositivo.
 
-### Passo 2️⃣: Abrir em Outro Dispositivo
+## Variáveis mínimas recomendadas
 
-**No smartphone/tablet/outro PC:**
+- Frontend (`.env`):
+  - `VITE_API_BASE_URL` (ex: `http://localhost:4000` no modo SaaS)
+  - `VITE_STRIPE_PUBLISHABLE_KEY` (para billing real)
+  - `VITE_PLUGGY_CLIENT_ID` e `VITE_PLUGGY_CLIENT_SECRET` (Open Finance)
 
-1. Abra o navegador (Chrome, Firefox, Safari)
-2. Digite na barra de endereço: `http://192.168.3.11:3000`
-   - Substitua `192.168.3.11` pelo IP do seu computador
-3. Pressione Enter
+- Backend (`server/.env`):
+  - `DATABASE_URL`
+  - `JWT_ACCESS_SECRET` e `JWT_REFRESH_SECRET`
+  - `STRIPE_SECRET_KEY` e `STRIPE_WEBHOOK_SECRET`
 
-### Passo 3️⃣: Instalar o App
+## Referências
 
-**Android/Windows/Linux:**
-- Clique em "Instalar" quando aparecer (ou ícone no canto da barra)
+- `QUICK_DEPLOY.md` para deploy rápido
+- `DEPLOYMENT.md` para cenários completos
+- `docs/OPEN_FINANCE_SETUP.md` para Pluggy/Open Finance
 
-**iPhone/iPad:**
-1. Clique no ícone de compartilhar (canto inferior)
-2. Role para baixo
-3. Clique "Adicionar à Tela Inicial"
-
-**Pronto! ✅**
-
----
-
-## 📍 Como Encontrar o IP do Computador
-
-### macOS:
-```bash
-ipconfig getifaddr en0
-```
-
-### Windows:
-```bash
-ipconfig
-# Procure por "IPv4 Address"
-```
-
-### Linux:
-```bash
-hostname -I
-```
-
----
-
-## ❓ Problemas Comuns
-
-| Problema | Solução |
-|----------|---------|
-| "Não consigo acessar" | Certifique-se que os dois estão na mesma WiFi |
-| "Botão Instalar não aparece" | Atualize o navegador (precisa ser recente) |
-| "App crasheou" | Feche e abra novamente (dados salvam localmente) |
-| "Dados sumiram" | Use Configurações → Importar para restaurar |
-
----
-
-## 💡 Dicas Úteis
-
-✅ **Dados seguros**: Ninguém consegue acessar seus dados - salvam localmente  
-✅ **Funciona offline**: Depois de instalar, trabalha sem internet  
-✅ **Múltiplos dispositivos**: Importe/exporte dados nas Configurações  
-✅ **Voltar depois**: Se parar o servidor, o app continua instalado  
-
----
-
-## 🔄 Se Precisar Parar e Reiniciar
-
-```bash
-# Parar o servidor
-Ctrl + C
-
-# Reiniciar depois
-cd /Users/macos/Downloads/pocket-ledger-main
-./serve-pwa.sh
-```
-
-Os apps já instalados **continuam funcionando** mesmo sem o servidor!
-
----
-
-**Tudo pronto! Divirta-se! 🎉**
+**Última atualização:** 21/02/2026

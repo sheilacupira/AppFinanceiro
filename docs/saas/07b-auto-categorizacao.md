@@ -1,59 +1,43 @@
-# Etapa 7b: Auto-Categorização Inteligente
+# Etapa 7b — Auto-categorização inteligente
 
-**Data:** 20 de fevereiro de 2026  
-**Status:** ✅ COMPLETA  
-**Build:** ✅ Lint + Build passaram
+## Objetivo
+Aplicar auto-categorização de transações importadas com base em keywords, merchants e fuzzy matching.
 
-## 📋 Resumo
+## Status
+✅ Concluída
 
-Implementada **auto-categorização inteligente** para transações importadas de extratos. O sistema agora:
+## Entregas implementadas
 
-1. **Analisa automaticamente a descrição** de cada transação
-2. **Sugere uma categoria** baseada em keywords e fuzzy matching
-3. **Permite revisão e ajuste** na UI antes de importar
-4. **Aplica a categoria corrigida** ao salvar
+- **Category Matcher** com 9 categorias principais e fuzzy matching (Levenshtein).
+- **Merchant Detection** com nomes conhecidos (Carrefour, Netflix, Shell, etc.).
+- **Scoring system** com exact match (0.95), keyword exact (0.7), fuzzy (0.5 × similarity).
+- Auto-categorização ao parser de OFX/CSV com campo `suggestedCategoryId`.
+- UI com dropdown de categoria na tabela de preview de importação.
+- Edição inline permitindo que o usuário corrija categoria antes de importar.
 
----
+## Arquivos principais
 
-## 🎯 Features Implementadas
+- `src/lib/categoryMatcher.ts` — Lógica de matching e scoring.
+- `src/lib/statementImport.ts` — Aplicação de categorização no parse.
+- `src/components/StatementImportManager.tsx` — Seletor de categoria na preview.
 
-### 1. **Category Matcher (src/lib/categoryMatcher.ts)**
+## Como validar
 
-Base de dados inteligente com:
+1. Abra Configurações.
+2. Importe um arquivo CSV ou OFX.
+3. Verifique que a coluna "Categoria" sugere valores automaticamente.
+4. Ajuste manualmente se necessário, clicando no dropdown.
+5. Confirme a importação e valide que transações ficaram com categorias corretas.
 
-- **9 categorias principais** (Alimentação, Saúde, Educação, Transporte, Utilidades, Entretenimento, Vestuário, Compras, Cartão)
-- **Levenshtein Distance** para fuzzy matching (tolerância de typos ~75%)
-- **Merchant Detection** com nomes conhecidos (Carrefour, Netflix, Shell, etc)
-- **Scoring system** com peso:
-  - Exact merchant match: 0.95
-  - Keyword exact: 0.7
-  - Fuzzy match: 0.5 × similarity
+## Próxima etapa
 
-### 2. **Statement Import Updates (src/lib/statementImport.ts)**
-
-- ✅ Novo campo `suggestedCategoryId` em `StatementItem`
-- ✅ Auto-categorização ao fazer parse (OFX e CSV)
-- ✅ Propagação para `Transaction` via `buildTransactionsFromItems`
-
-### 3. **UI com Seletor de Categoria (src/components/StatementImportManager.tsx)**
-
-- ✅ Coluna "Categoria" na tabela preview
-- ✅ Dropdown com todas as 9 categorias
-- ✅ Override de categoria (user pode mudar antes de importar)
-- ✅ Estado `categoryOverrides` rastreia mudanças
-- ✅ Aplicação das categorias customizadas no import
+- Integração Open Finance (Belvo, Pluggy) para importação automática.
+- Expansão da base de merchants brasileiros.
+- ML opcional: modelo treinado com histórico do usuário.
 
 ---
 
-## 🔍 How It Works
-
-### Fluxo de Categorização
-
-```
-1. User faz upload de CSV/OFX
-       ↓
-2. Parser detecta format e lê transações
-       ↓
+**Última atualização:** 21/02/2026
 3. Para CADA transação:
    - Chama categorizeTransaction(description)
    - Returns: {categoryId, confidence, alternatives}
@@ -80,11 +64,9 @@ Base de dados inteligente com:
 | "Uber 15.50"           | Transporte        | 0.95      | Exact merchant match         |
 | "Transferência P2P"    | Compras           | 0.00      | Sem match (fallback)         |
 
----
+## Arquivos principais
 
-## 📁 Arquivos Modificados/Criados
-
-### Novos:
+### Novos
 - `src/lib/categoryMatcher.ts` (210 linhas)
   - `categorizeTransaction()` - Sugere categoria com confiança
   - `getAllCategories()` - Lista todas as 9 categorias
@@ -104,9 +86,7 @@ Base de dados inteligente com:
   - Dropdown select para cada transação
   - Aplicação de overrides no `handleImport()`
 
----
-
-## 🧪 Teste Manual
+## Como validar
 
 1. **Fazer upload de CSV/OFX**
    ```
@@ -132,9 +112,7 @@ Base de dados inteligente com:
    → Transações aparecem na aba Mês com categorias
    ```
 
----
-
-## 📊 Base de Dados de Categorias
+## Base de dados de categorias
 
 Cada categoria tem:
 - `id` - identificador único (ex: "alimentacao")
@@ -153,23 +131,7 @@ Cada categoria tem:
 8. Compras (Amazon, Marketplace, E-commerce, etc)
 9. Cartão (Fatura, Juros, Anuidade, etc)
 
----
-
-## 🚀 Próximos Passos (Etapa 7c)
-
-- **Open Finance Integration**: Conectar direto com agregadores (Belvo, Pluggy)
-- **Merchant Database**: Expandir com mais merchants brasileiros
-- **ML Categorization** (opcional): Treinar modelo com histórico do user
-
----
-
-## ✅ Validação
-
-- ✅ Lint: 0 errors
-- ✅ Build: Sem erros TypeScript
-- ✅ Bundle size: 848.68 kB (aceitável)
-- ✅ PWA: Gerado com sucesso
-
----
-
-**Próxima reunião:** Etapa 7c (Open Finance) ou Bloco C (Billing)
+## Próxima etapa
+- Integração Open Finance (Belvo, Pluggy) para importação automática.
+- Expansão da base de merchants brasileiros.
+- ML opcional: modelo treinado com histórico do usuário.

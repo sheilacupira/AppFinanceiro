@@ -1,44 +1,34 @@
 # Etapa 3 — Integração de autenticação no frontend
 
 ## Objetivo
-Conectar o app frontend ao backend SaaS para habilitar login/cadastro/sessão no modo `saas`, mantendo compatibilidade com modo `local`.
+Conectar o app frontend ao backend SaaS para habilitar login/cadastro/sessão no modo SaaS, mantendo compatibilidade total com o modo local.
 
-## Implementações realizadas
-- `AuthProvider` global no app.
-- Fluxo de sessão com:
-  - login
-  - cadastro
-  - refresh token
-  - logout
-  - recuperação de sessão ao abrir o app
-- `AuthPage` (login/cadastro) para usuários não autenticados no modo SaaS.
-- Guard de rota na página inicial (`Index`) respeitando `isSaasMode`.
-- Bloco de conta SaaS nas configurações com ação de logout.
+## Status
+✅ Concluída
+
+## Entregas implementadas
+- `AuthProvider` global com contexto de autenticação.
+- Fluxo completo de sessão (login, cadastro, refresh token, logout, recuperação).
+- `AuthPage` para usuários não autenticados em modo SaaS.
+- Guard de rota condicional respeitando `isSaasMode`.
+- Seção de conta SaaS nas configurações com ação de logout.
 
 ## Arquivos principais
 - `src/contexts/AuthContext.tsx`
 - `src/pages/AuthPage.tsx`
 - `src/lib/apiClient.ts`
-- `src/pages/Index.tsx`
-- `src/pages/SettingsPage.tsx`
+- `src/pages/Index.tsx`, `SettingsPage.tsx`
 - `src/App.tsx`
 
-## Como testar
-1. Backend:
-   - `cd server`
-   - `cp .env.example .env`
-   - `npm install`
-   - `npm run prisma:migrate -- --name init`
-   - `npm run dev`
-2. Frontend:
-   - no arquivo `.env` da raiz, configure `VITE_APP_MODE=saas`
-   - opcional: `VITE_API_BASE_URL=http://localhost:4000`
-   - `npm run dev`
-3. Acesse o app e valide:
-   - cadastro
-   - login
-   - recarregar página mantendo sessão
-   - logout em Configurações
+## Como validar
+1. Subir backend (`cd server && npm run dev`).
+2. Configurar `.env` na raiz com `VITE_APP_MODE=saas`.
+3. Subir frontend (`npm run dev`).
+4. Testar cadastro → login → recarregar → logout.
 
 ## Próxima etapa
-Integrar dados financeiros ao backend (sincronização de transações por tenant), mantendo fallback offline.
+Sincronização de transações por tenant com fallback offline.
+
+---
+
+**Última atualização:** 21/02/2026

@@ -1,32 +1,71 @@
-# Backlog MVP SaaS (priorizado)
+# Backlog MVP — Blocos de Priorização
+
+Este documento organiza as funcionalidades pendentes em blocos por prioridade. Os itens concluídos foram marcados como ✅.
+
+---
 
 ## Bloco A — Core SaaS
-1. API base (health, auth, me)
-2. Banco relacional com modelagem multi-tenant
-3. Cadastro/login/reset de senha
-4. Sessão segura e refresh token
-5. CRUD de transações por tenant
+
+- ✅ API base (health, auth, me)
+- ✅ Banco relacional com modelagem multi-tenant
+- ✅ Cadastro/login/reset de senha
+- ✅ Sessão segura e refresh token
+- ✅ CRUD de transações por tenant
+
+**Status:** 100% concluído
+
+---
 
 ## Bloco B — Migração do app atual
-1. Adaptador para sync local <-> nuvem
-2. Versionamento de schema de dados
-3. Migração assistida de dados locais
-4. Resolução de conflitos de sincronização
+
+- ✅ Adaptador para sync local <-> nuvem
+- ✅ Versionamento de schema de dados
+- ✅ Migração assistida de dados locais
+- ✅ Resolução de conflitos de sincronização (MVP: last-write-wins)
+
+**Status:** 100% concluído (MVP)
+
+---
 
 ## Bloco C — Billing
-1. Planos Free/Pro
-2. Assinatura + trial
-3. Webhooks de cobrança
-4. Bloqueios por feature/limite
+
+- ✅ Planos Free/Pro
+- ✅ Assinatura + trial
+- ✅ Webhooks de cobrança
+- ✅ Bloqueios por feature/limite
+
+**Status:** 100% concluído
+
+---
 
 ## Bloco D — Extrato bancário
-1. Upload de arquivo CSV/OFX
-2. Parser e normalização
-3. Deduplicação e conciliação
-4. Preview com confirmação antes de importar
+
+- ✅ Upload de arquivo CSV/OFX
+- ✅ Parser e normalização
+- ✅ Deduplicação e conciliação
+- ✅ Preview com confirmação antes de importar
+- ✅ Auto-categorização com fuzzy matching
+
+**Status:** 100% concluído
+
+---
 
 ## Bloco E — Operação e compliance
-1. Logs e monitoramento
-2. Auditoria de eventos críticos
-3. Política LGPD (retenção/exclusão)
-4. Runbook de incidentes
+
+- ❌ Logs e monitoramento
+- ❌ Auditoria de eventos críticos
+- ❌ Política LGPD (retenção/exclusão)
+- ❌ Runbook de incidentes
+
+**Status:** Pendente
+
+---
+
+## Observações
+
+- A maioria dos blocos foi concluída durante as etapas 1–7b.
+- Bloco E (Operação e compliance) é necessário para produção, mas não bloqueia o MVP funcional.
+
+---
+
+**Última atualização:** 21/02/2026

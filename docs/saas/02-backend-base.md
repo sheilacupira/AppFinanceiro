@@ -1,37 +1,37 @@
 # Etapa 2 — Backend inicial multi-tenant
 
 ## Objetivo
-Disponibilizar API inicial para autenticação, sessão e contexto de tenant.
+Disponibilizar API inicial para autenticação, sessão de usuário e contexto de tenant.
 
-## Stack adotada
-- Node.js + Express
-- Prisma ORM + SQLite (desenvolvimento local)
-- JWT (access + refresh token)
+## Status
+✅ Concluída
 
-## Estrutura criada
-- `server/src/index.ts` — bootstrap da API
-- `server/src/routes/health.ts` — healthcheck
-- `server/src/routes/auth.ts` — register/login/refresh/logout
-- `server/src/routes/me.ts` — dados do usuário autenticado
-- `server/src/middleware/auth.ts` — middleware Bearer token
-- `server/prisma/schema.prisma` — User, Tenant, Membership, RefreshToken
+## Entregas implementadas
+- Estrutura Node.js + Express + Prisma ORM.
+- Modelo de dados multi-tenant (`User`, `Tenant`, `Membership`, `RefreshToken`).
+- Endpoints de autenticação (register, login, refresh, logout).
+- Endpoint `/api/me` com dados do usuário autenticado.
+- Middleware JWT para proteger rotas.
 
-## Endpoints disponíveis
-- `GET /api/health`
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `POST /api/auth/refresh`
-- `POST /api/auth/logout`
-- `GET /api/me`
+## Arquivos principais
+- `server/src/index.ts` (bootstrap da API)
+- `server/src/routes/auth.ts`, `me.ts`, `health.ts`
+- `server/src/middleware/auth.ts`
+- `server/prisma/schema.prisma`
 
-## Como rodar localmente
-1. `cd server`
-2. `cp .env.example .env`
-3. `npm install`
-4. `npm run prisma:migrate -- --name init`
-5. `npm run dev`
+## Como validar localmente
+```bash
+cd server
+cp .env.example .env
+npm install
+npm run prisma:migrate
+npm run dev
+```
+API disponível em `http://localhost:4000`.
 
-API em: `http://localhost:4000`
+## Próxima etapa
+Integrar frontend com autenticação e alternância `local`/`saas`.
 
-## Próximo passo (Etapa 3)
-Integrar frontend com autenticação e troca de modo `local`/`saas`.
+---
+
+**Última atualização:** 21/02/2026

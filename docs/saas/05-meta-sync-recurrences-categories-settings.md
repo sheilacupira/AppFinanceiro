@@ -1,35 +1,34 @@
-# Etapa 5 — Sync de recorrências, categorias e configurações
+# Etapa 5 — Sincronização de recorrências, categorias e configurações
 
 ## Objetivo
-Completar a sincronização SaaS dos dados financeiros além de transações.
+Completar sincronização SaaS de todos os metadados financeiros além de transações.
 
-## Entregas
+## Status
+✅ Concluída
+
+## Entregas implementadas
 
 ### Backend
-- Modelos multi-tenant adicionados:
-  - `FinanceRecurrence`
-  - `FinanceCategory`
-  - `FinanceSettings`
-- Rotas protegidas por tenant:
-  - `GET /api/finance-meta`
-  - `PUT /api/recurrences/:id`
-  - `DELETE /api/recurrences/:id`
-  - `PUT /api/categories/:id`
-  - `DELETE /api/categories/:id`
-  - `PUT /api/settings`
+- Modelos multi-tenant: `FinanceRecurrence`, `FinanceCategory`, `FinanceSettings`.
+- Rotas protegidas: `GET /api/finance-meta`, upserts e deletes por entidade.
 
 ### Frontend
-- Serviço de sync para metadados financeiros:
-  - `src/lib/financeMetaSync.ts`
-- Integração no `FinanceContext` para:
-  - sincronizar no login SaaS
-  - upsert/delete remoto em mudanças locais de recorrências/categorias
-  - persistência remota de configurações
+- Serviço `financeMetaSync.ts` para sincronizar recorrências, categorias e configurações.
+- Integração no `FinanceContext` para replicação automática no modo SaaS.
 
-## Observações
-- Fluxo continua local-first.
-- Em falhas de rede, dados locais são preservados e erro é registrado no console.
+## Arquivos principais
+- `server/prisma/schema.prisma`
+- `server/src/routes/finance-meta.ts`
+- `src/lib/financeMetaSync.ts`
+- `src/contexts/FinanceContext.tsx`
 
-## Próxima etapa sugerida
-- Fila de retries offline + resolução de conflitos de sincronização.
-- Em seguida, iniciar módulo de importação de extrato CSV/OFX.
+## Comportamento
+- Local-first mantido.
+- Falhas de rede preservam dados locais.
+
+## Próxima etapa
+Fila de retry offline + resolução básica de conflitos.
+
+---
+
+**Última atualização:** 21/02/2026

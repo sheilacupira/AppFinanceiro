@@ -1,151 +1,116 @@
-# 🚀 Financeiro PWA - Guia de Deployment
+# 🚀 Guia de Deploy
 
-## ✅ Build Compilado com Sucesso!
+**Última atualização:** 21/02/2026
 
-A pasta `dist/` contém a versão compilada e otimizada do app, pronta para produção.
+Este projeto suporta dois cenários de deploy:
+
+1. **Frontend/PWA standalone** (local-first)
+2. **Full stack SaaS** (frontend + backend + banco + Stripe)
 
 ---
 
-## 📱 Como Rodar em Qualquer Aparelho
+## 1) Frontend/PWA standalone
 
-### **Opção 1: Na Mesma Rede (Mais Fácil - 30 segundos)**
+### Build e execução local
 
 ```bash
-# No seu computador:
+npm install
+npm run build
+npm run serve
+```
+
+Ou:
+
+```bash
 ./serve-pwa.sh
 ```
 
-O script vai mostrar dois endereços:
-- **Local**: `http://localhost:3000` (só seu computador)
-- **Rede**: `http://192.168.X.X:3000` (qualquer dispositivo na mesma rede)
+### Hospedagem estática
 
-**Em outro dispositivo (smartphone, tablet, outro PC):**
-1. Conecte na mesma rede Wi-Fi
-2. Abra o navegador
-3. Digite o endereço de rede (ex: `http://192.168.3.10:3000`)
-4. Clique em "Instalar" (Chrome, Firefox, Edge) ou Menu → "Adicionar à Tela Inicial" (Safari)
+- Vercel
+- Netlify
+- Cloudflare Pages
+- Qualquer servidor de arquivos estáticos
+
+Variável relevante:
+- `VITE_API_BASE_URL` vazio (ou omitido) para operação local-only
 
 ---
 
-### **Opção 2: Com Node.js Instalado**
+## 2) Full stack SaaS
+
+### Backend (Node + Prisma)
 
 ```bash
-# Instalar dependência de servidor HTTP
-npm install -g http-server
-
-# Servir a pasta dist
-cd /Users/macos/Downloads/AppFinanceiro-main
-http-server dist -p 3000 -c-1
+cd server
+npm install
+cp .env.example .env
+npm run prisma:migrate
+npm run build
+npm run start
 ```
 
-Depois acesse em outro dispositivo como na Opção 1.
+`server/.env` mínimo:
+- `PORT`
+- `CORS_ORIGIN`
+- `DATABASE_URL`
+- `JWT_ACCESS_SECRET`
+- `JWT_REFRESH_SECRET`
 
----
+Para billing Stripe:
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `STRIPE_PRICE_PRO_MONTHLY`
+- `STRIPE_PRICE_PRO_YEARLY`
+- `STRIPE_PRICE_ENTERPRISE_MONTHLY`
+- `STRIPE_PRICE_ENTERPRISE_YEARLY`
 
-### **Opção 3: Deploy em Servidor Online**
+📘 **Guias de configuração Stripe:**
+- [Criar Price IDs no Stripe Dashboard](./docs/STRIPE_PRICING_SETUP.md)
+- [Quick Reference Stripe](./docs/STRIPE_QUICK_REFERENCE.md)
 
-Se quiser rodar o app **permanentemente online**, você pode fazer deploy em:
+### Frontend
 
-#### **Vercel (Recomendado - Grátis)**
 ```bash
-npm install -g vercel
-vercel deploy
+cd ..
+npm install
+npm run build
+npm run preview
 ```
 
-#### **Netlify (Também Grátis)**
-Arraste a pasta `dist/` para: https://app.netlify.com/drop
-
-#### **GitHub Pages**
-```bash
-# Crie um repositório no GitHub
-git init
-git add .
-git commit -m "Deploy Financeiro PWA"
-git remote add origin https://github.com/seu-usuario/seu-repo.git
-git push -u origin main
-```
-
-Depois ative GitHub Pages nas configurações do repositório.
+`.env` recomendado no frontend:
+- `VITE_API_BASE_URL` (URL pública da API)
+- `VITE_STRIPE_PUBLISHABLE_KEY`
+- `VITE_PLUGGY_CLIENT_ID`
+- `VITE_PLUGGY_CLIENT_SECRET`
 
 ---
 
-## 📊 Informações do Build
+## Stripe webhook
 
-| Métrica | Valor |
-|---------|-------|
-| **CSS Minificado** | 59.58 kB (gzip: 10.54 kB) |
-| **JavaScript** | 803.41 kB (gzip: 234.06 kB) |
-| **Service Worker** | Configurado ✅ |
-| **PWA Manifest** | Configurado ✅ |
-| **Cache Inteligente** | Ativo ✅ |
+Endpoint: `POST /api/billing/webhook`
+
+- Publicar endpoint HTTPS
+- Configurar segredo em `STRIPE_WEBHOOK_SECRET`
+- Garantir que eventos de checkout/subscription sejam entregues para a API
 
 ---
 
-## 🔒 Privacidade & Segurança
+## Open Finance (Pluggy)
 
-✅ **Todos os dados são salvos LOCALMENTE** no seu dispositivo  
-✅ **Nenhuma informação é enviada para servidor** (offline-first)  
-✅ **Funciona sem Internet** depois de instalado  
-✅ **Sincronize entre dispositivos** via Configurações → Exportar/Importar  
+O app já possui integração e fallback mock. Em produção:
 
----
-
-## 🎯 Funcionalidades Implementadas
-
-✅ Gerenciamento de transações (entradas/saídas)  
-✅ Transações recorrentes (aparecem no dia 1 automaticamente)  
-✅ Categorias personalizadas  
-✅ Gráfico de gastos por categoria (pizza chart)  
-✅ Filtro por intervalo de datas  
-✅ Busca e filtros avançados  
-✅ Editar/deletar transações individuais  
-✅ Tema claro/escuro  
-✅ Instalável como app nativo  
-✅ Dízimo automático (opcional)  
+- Defina credenciais Pluggy no frontend
+- Revise `docs/OPEN_FINANCE_SETUP.md`
+- Considere mover autenticação Pluggy para backend por segurança
 
 ---
 
-## 📥 Fazer Backup dos Dados
+## Checklist final
 
-Se mudar de dispositivo:
-
-1. Abra o app
-2. Vá para **Configurações**
-3. Clique em **"Exportar Dados"**
-4. Salve o arquivo JSON
-
-Para restaurar em outro dispositivo:
-1. Abra o app
-2. Vá para **Configurações**
-3. Clique em **"Importar Dados"**
-4. Selecione o arquivo JSON
-
----
-
-## ✨ Próximas Melhorias (Opcionais)
-
-- [ ] Backup automático diário
-- [ ] Swipe gestures para fechar modais
-- [ ] Relatórios mensais/anuais avançados
-- [ ] Metas de gastos por categoria
-- [ ] Integração com calendário
-
----
-
-## 🆘 Troubleshooting
-
-**P: O app não carrega?**  
-R: Verifique se ambos dispositivos estão na mesma rede Wi-Fi
-
-**P: Dados não aparecem após fechar?**  
-R: O Service Worker pode estar em cache. Limpe dados do site e reabra
-
-**P: Como instalar em iPhone?**  
-R: Safari → Compartilhar → "Adicionar à Tela Inicial"
-
-**P: Pode usar com Internet instável?**  
-R: Sim! Após primeira carga, funciona offline completamente
-
----
-
-**Divirta-se controlando suas finanças! 💰✨**
+- Frontend build ok (`npm run build`)
+- Backend build ok (`cd server && npm run build`)
+- Migrações aplicadas (`npm run prisma:migrate`)
+- CORS apontando para domínio correto
+- Variáveis Stripe preenchidas
+- Teste de login, sync e assinatura realizado

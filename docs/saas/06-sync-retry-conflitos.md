@@ -1,25 +1,31 @@
-# Etapa 6 — Retry offline + resolução de conflitos (MVP)
+# Etapa 6 — Retry offline e resolução de conflitos (MVP)
 
 ## Objetivo
-Garantir que operações realizadas offline sejam reprocessadas quando a conexão voltar, reduzindo perda de dados no modo SaaS.
+Garantir que operações realizadas offline sejam reprocessadas automaticamente quando a conexão retornar.
 
-## Estratégia aplicada
-- **Fila local** em `localStorage` com operações pendentes (upsert/delete).
-- **Deduplicação por entidade**: somente a última operação por item é mantida na fila.
-- **Reprocessamento automático**:
-  - ao autenticar no modo SaaS;
-  - a cada 30 segundos;
-  - no evento `online` do navegador.
+## Status
+✅ Concluída (MVP)
+
+## Entregas implementadas
+- Fila local (`syncQueue.ts`) em `localStorage` com operações pendentes.
+- Deduplicação: última operação por item prevalece.
+- Reprocessamento automático:
+  - Ao autenticar no modo SaaS.
+  - A cada 30 segundos.
+  - No evento `online` do navegador.
 
 ## Regra de conflito (MVP)
-- **Última escrita local prevalece**.
-- Em erro de rede, a operação é enfileirada.
-- Em erro permanente (ex.: regra de negócio no backend), a operação permanece na fila até intervenção manual (não implementada ainda).
+- Última escrita local prevalece.
+- Erros de rede enfileiram operação.
+- Erros permanentes mantêm operação na fila (sem painel de resolução ainda).
 
 ## Arquivos principais
 - `src/lib/syncQueue.ts`
 - `src/contexts/FinanceContext.tsx`
 
-## Próximo passo
-- Adicionar painel de conflitos/erros para o usuário.
-- Melhorar resolução com timestamps e merge no backend.
+## Próxima etapa
+Painel de conflitos para usuário e merge baseado em timestamps no backend.
+
+---
+
+**Última atualização:** 21/02/2026

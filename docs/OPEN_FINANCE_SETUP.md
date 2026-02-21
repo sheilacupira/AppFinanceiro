@@ -2,16 +2,15 @@
 
 ## 📋 Visão Geral
 
-A integração com **Open Finance** permite que usuários conectem suas contas bancárias diretamente ao app e importem transações automaticamente, sem precisar fazer upload manual de CSV/OFX.
+A integração com **Open Finance** já possui base funcional no app, com suporte a modo mock e estrutura Pluggy. Parte do fluxo real ainda está em evolução.
 
 ### ✨ Funcionalidades
 
-- ✅ Conexão com +200 instituições financeiras brasileiras
-- ✅ Importação automática de transações
-- ✅ Sincronização em tempo real
-- ✅ Suporte a múltiplas contas
-- ✅ Gerenciamento seguro de credenciais
-- ✅ Auto-categorização de transações
+- ✅ Listagem de instituições suportadas
+- ✅ Gestão de conexões no app
+- ✅ Modo mock para desenvolvimento e demo
+- ✅ Base para importação e categorização de transações
+- 🟡 Fluxo real completo (widget + sync automático) em finalização
 
 ---
 
@@ -80,15 +79,14 @@ Agora o Open Finance estará ativo!
 ### 2. Conectar Banco
 
 1. Clique no card do seu banco
-2. Uma tela de login bancário será aberta (Pluggy Connect Widget)
-3. Digite suas credenciais bancárias
-4. Autorize a conexão
-5. Aguarde sincronização
+2. Atualmente o fluxo padrão usa simulação/mode mock para conexão
+3. No fluxo real (em evolução), o Pluggy Connect Widget fará autenticação bancária
+4. Após a conexão, a conta fica registrada no app
 
 ### 3. Sincronizar Transações
 
-- **Automático**: A cada 24h
-- **Manual**: Clique em "Sincronizar" no card da conta
+- **Automático**: previsto para etapa seguinte
+- **Manual**: disponível via ação de sincronização no card da conta (status parcial)
 
 ### 4. Desconectar Banco
 
@@ -328,11 +326,10 @@ Ver preços: https://pluggy.ai/pricing
 
 ## 🎉 Conclusão
 
-Com Open Finance configurado, seu app agora:
+O módulo Open Finance já está integrado ao produto em nível de base técnica e experiência de uso, com fallback mock para continuidade do fluxo.
 
-- ✅ Importa transações automaticamente
-- ✅ Economiza tempo do usuário
-- ✅ Reduz erros de digitação manual
-- ✅ Mantém dados sempre atualizados
+- ✅ Estrutura pronta para evolução incremental
+- ✅ Desenvolvimento/testes possíveis sem credenciais reais
+- 🟡 Homologação final do fluxo 100% automático ainda pendente
 
-**Próximo passo**: Teste conectando sua conta bancária real! 🚀
+**Próximo passo:** concluir widget real + sincronização automática e validar em ambiente de produção.

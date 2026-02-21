@@ -1,79 +1,57 @@
-# 🚀 Deploy na Vercel - Passo a Passo (2 minutos)
+# 🚀 Deploy na Vercel
 
-## ✅ Opção 1: Deploy Automático (MAIS FÁCIL)
+**Última atualização:** 21/02/2026
 
-1. Vá para: https://vercel.com/dashboard
-2. Clique em **"Add New..." → "Project"**
-3. Escolha **"Import Git Repository"**
-4. Cole a URL do seu repositório GitHub/GitLab
-5. Clique em **"Deploy"**
-6. Pronto! Seu app está online! 🎉
+## Cenário A — Frontend/PWA standalone
 
----
-
-## ✅ Opção 2: Upload Manual (MAIS RÁPIDO)
-
-### Passo 1: Prepara a Pasta
+### 1) Build local
 ```bash
-cd /Users/macos/Downloads/AppFinanceiro-main
-# A pasta dist/ já está pronta!
+npm install
+npm run build
 ```
 
-### Passo 2: Vai para Vercel
-1. Acesse: https://vercel.com/new
-2. Clique em **"Deploy without Git"**
-3. **Arraste a pasta `dist/` para a caixa** (ou clique para selecionar)
-4. Configure:
-   - **Project Name**: financeiro-app
-   - **Framework**: Static (HTML, CSS, JS)
-5. Clique em **"Deploy"**
+### 2) Publicação
 
-### Passo 3: Pronto!
-Você recebe um link permanente como:
-```
-https://financeiro-app.vercel.app
-```
+- Via Git (recomendado): importar o repositório em https://vercel.com/new
+- Via upload manual: enviar a pasta `dist/` em “Deploy without Git”
 
-Compartilhe com amigos e eles podem usar de qualquer lugar! 🌐
+### 3) Configuração
+
+- Framework: `Vite` (ou Static se upload da `dist`)
+- Sem variáveis obrigatórias para modo local-only
 
 ---
 
-## 📱 Seu App Online
+## Cenário B — Frontend SaaS (com API separada)
 
-Após deploy, seu app estará:
-- ✅ Acessível de qualquer dispositivo
-- ✅ Com URL permanente
-- ✅ HTTPS seguro (automático)
-- ✅ Funciona offline (PWA)
-- ✅ Pronto para compartilhar
+### 1) Publicar backend primeiro
 
----
+Hospede o backend em plataforma de API (Render/Railway/Fly.io/VM etc) e obtenha a URL pública.
 
-## 🔗 Links Úteis
+### 2) Configurar variáveis no projeto Vercel
 
-- **Vercel Dashboard**: https://vercel.com/dashboard
-- **Novo Deploy**: https://vercel.com/new
-- **Seus Projetos**: https://vercel.com/dashboard/projects
+- `VITE_API_BASE_URL` = URL pública da API
+- `VITE_STRIPE_PUBLISHABLE_KEY` (se billing real)
+- `VITE_PLUGGY_CLIENT_ID` e `VITE_PLUGGY_CLIENT_SECRET` (Open Finance)
 
----
+### 3) Deploy do frontend
 
-## 💡 Alternativas se Vercel não funcionar
-
-Se tiver problema com Vercel, use:
-
-### **Netlify (Ainda Mais Fácil)**
-1. Acesse: https://app.netlify.com/drop
-2. Arraste a pasta `dist/` para a página
-3. Seu app está online em segundos!
-
-### **GitHub Pages (Grátis e Permanente)**
-1. Crie repositório no GitHub
-2. Push do código
-3. Ativa GitHub Pages nas configurações
-4. Seu app em `seu-usuario.github.io/financeiro`
+Redeploy após salvar as variáveis.
 
 ---
 
-**Qualquer dúvida, é só chamar!** 🚀
+## Checklist pós-deploy
 
-Seu app será acessível via URL permanente que você pode compartilhar com qualquer amigo!
+- [ ] Frontend abre sem erro no console
+- [ ] Login SaaS funciona (se ativo)
+- [ ] Chamadas à API respondem corretamente
+- [ ] Fluxo de assinatura abre checkout Stripe
+- [ ] PWA instalável no domínio final
+
+---
+
+## Links úteis
+
+- Vercel Dashboard: https://vercel.com/dashboard
+- Novo projeto: https://vercel.com/new
+- Projetos: https://vercel.com/dashboard/projects
