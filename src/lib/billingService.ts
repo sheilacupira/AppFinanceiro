@@ -5,21 +5,26 @@
 
 import type { Subscription, Invoice, PaymentMethod, BillingInterval } from '@/types/billing';
 import type { PlanId } from '@/types/billing';
+import { apiRequest } from '@/lib/apiClient';
+import { loadSaasTokens } from '@/lib/saasAuthStorage';
 
 class BillingService {
-  private apiKey: string | null = null;
   private publishableKey: string | null = null;
   private mockMode = false;
 
+  private getAuthToken(): string | undefined {
+    return loadSaasTokens()?.accessToken;
+  }
+
   async initialize() {
-    this.apiKey = import.meta.env.VITE_STRIPE_SECRET_KEY || null;
     this.publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || null;
 
-    if (!this.apiKey || !this.publishableKey) {
-      console.warn('⚠️ Stripe credentials not found. Running in MOCK mode.');
+    if (!this.publishableKey) {
+      console.warn('⚠️ Stripe publishable key not found. Running in MOCK mode.');
       this.mockMode = true;
     } else {
       console.log('✅ Stripe initialized successfully');
+      this.mockMode = false;
     }
   }
 
@@ -37,24 +42,16 @@ class BillingService {
       return this.mockCreateCheckoutSession(planId, interval);
     }
 
-    // TODO: Integração real com Stripe
-    const response = await fetch('/api/billing/checkout', {
+    return apiRequest<{ sessionId: string; url: string }>('/api/billing/checkout', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      token: this.getAuthToken(),
       body: JSON.stringify({
         planId,
         interval,
-        userId,
         successUrl,
         cancelUrl,
       }),
     });
-
-    if (!response.ok) {
-      throw new Error('Failed to create checkout session');
-    }
-
-    return response.json();
   }
 
   /**
@@ -65,13 +62,10 @@ class BillingService {
       return this.mockGetSubscription(userId);
     }
 
-    const response = await fetch(`/api/billing/subscription?userId=${userId}`);
-
-    if (!response.ok) {
-      return null;
-    }
-
-    return response.json();
+    return apiRequest<Subscription | null>('/api/billing/subscription', {
+      method: 'GET',
+      token: this.getAuthToken(),
+    });
   }
 
   /**
@@ -82,13 +76,13 @@ class BillingService {
       return this.mockCancelSubscription(subscriptionId);
     }
 
-    const response = await fetch('/api/billing/subscription/cancel', {
+    await apiRequest<void>('/api/billing/subscription/cancel', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      token: this.getAuthToken(),
       body: JSON.stringify({ subscriptionId }),
     });
 
-    return response.ok;
+    return true;
   }
 
   /**
@@ -99,13 +93,13 @@ class BillingService {
       return this.mockReactivateSubscription(subscriptionId);
     }
 
-    const response = await fetch('/api/billing/subscription/reactivate', {
+    await apiRequest<void>('/api/billing/subscription/reactivate', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      token: this.getAuthToken(),
       body: JSON.stringify({ subscriptionId }),
     });
 
-    return response.ok;
+    return true;
   }
 
   /**
@@ -120,13 +114,13 @@ class BillingService {
       return this.mockChangePlan(subscriptionId, newPlanId);
     }
 
-    const response = await fetch('/api/billing/subscription/change-plan', {
+    await apiRequest<void>('/api/billing/subscription/change-plan', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      token: this.getAuthToken(),
       body: JSON.stringify({ subscriptionId, newPlanId, interval }),
     });
 
-    return response.ok;
+    return true;
   }
 
   /**
@@ -137,13 +131,10 @@ class BillingService {
       return this.mockGetInvoices(userId);
     }
 
-    const response = await fetch(`/api/billing/invoices?userId=${userId}`);
-
-    if (!response.ok) {
-      return [];
-    }
-
-    return response.json();
+    return apiRequest<Invoice[]>('/api/billing/invoices', {
+      method: 'GET',
+      token: this.getAuthToken(),
+    });
   }
 
   /**
@@ -154,13 +145,10 @@ class BillingService {
       return this.mockGetPaymentMethods(userId);
     }
 
-    const response = await fetch(`/api/billing/payment-methods?userId=${userId}`);
-
-    if (!response.ok) {
-      return [];
-    }
-
-    return response.json();
+    return apiRequest<PaymentMethod[]>('/api/billing/payment-methods', {
+      method: 'GET',
+      token: this.getAuthToken(),
+    });
   }
 
   /**
@@ -171,17 +159,11 @@ class BillingService {
       return { url: returnUrl };
     }
 
-    const response = await fetch('/api/billing/portal', {
+    return apiRequest<{ url: string }>('/api/billing/portal', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, returnUrl }),
+      token: this.getAuthToken(),
+      body: JSON.stringify({ returnUrl }),
     });
-
-    if (!response.ok) {
-      throw new Error('Failed to create portal session');
-    }
-
-    return response.json();
   }
 
   // ==================== MOCK MODE ====================

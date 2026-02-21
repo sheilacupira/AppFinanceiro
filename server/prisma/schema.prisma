@@ -27,6 +27,10 @@ model User {
 model Tenant {
   id            String         @id @default(cuid())
   name          String
+  stripeCustomerId String?     @unique
+  stripeSubscriptionId String?
+  billingPlan   String         @default("free")
+  billingStatus String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   memberships   Membership[]
