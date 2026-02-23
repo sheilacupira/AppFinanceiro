@@ -16,6 +16,8 @@ const envSchema = z.object({
   STRIPE_PRICE_ENTERPRISE_MONTHLY: z.string().optional(),
   STRIPE_PRICE_ENTERPRISE_YEARLY: z.string().optional(),
   BILLING_PORTAL_RETURN_URL: z.string().default('http://localhost:8080/config'),
+  PLUGGY_CLIENT_ID: z.string().optional(),
+  PLUGGY_CLIENT_SECRET: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);

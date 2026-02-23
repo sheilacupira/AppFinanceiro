@@ -75,6 +75,19 @@ export function BillingManager({ userId }: BillingManagerProps) {
     }
   };
 
+  const handleOpenCustomerPortal = async () => {
+    try {
+      await billingService.initialize();
+      const result = await billingService.createCustomerPortalSession(userId, window.location.href);
+      if (result.url) {
+        window.location.href = result.url;
+      }
+    } catch (err) {
+      alert('Erro ao abrir painel de gerenciamento');
+      console.error(err);
+    }
+  };
+
   const handleReactivateSubscription = async () => {
     if (!subscription) return;
 
@@ -207,6 +220,18 @@ export function BillingManager({ userId }: BillingManagerProps) {
                   </div>
                 </div>
               </div>
+
+              <Separator />
+
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleOpenCustomerPortal}
+                disabled={actionLoading}
+                className="w-full"
+              >
+                Atualizar Método de Pagamento
+              </Button>
 
               <Separator />
 

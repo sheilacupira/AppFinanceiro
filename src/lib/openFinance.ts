@@ -6,55 +6,42 @@
 import type {
   BankConnection,
   BankAccount,
-  BankTransaction,
   BankInstitution,
-  PluggyConnectToken,
   PluggyItem,
   PluggyAccount,
   PluggyTransaction,
 } from '@/types/openFinance';
 import type { Transaction } from '@/types/finance';
-
-const PLUGGY_API_BASE_URL = 'https://api.pluggy.ai';
-const PLUGGY_CLIENT_ID = import.meta.env.VITE_PLUGGY_CLIENT_ID || '';
-const PLUGGY_CLIENT_SECRET = import.meta.env.VITE_PLUGGY_CLIENT_SECRET || '';
-
-// Mock mode para desenvolvimento (quando não tem credenciais)
-const MOCK_MODE = !PLUGGY_CLIENT_ID || !PLUGGY_CLIENT_SECRET;
+import { apiRequest } from '@/lib/apiClient';
 
 class OpenFinanceService {
-  private apiKey: string = '';
+  private accessToken: string | null = null;
+  private mockMode = true;
+
+  isMockMode(): boolean {
+    return this.mockMode;
+  }
 
   /**
    * Inicializa a conexão com Pluggy
    */
-  async initialize(): Promise<void> {
-    if (MOCK_MODE) {
-      console.warn('⚠️ Open Finance em MODO MOCK - configure VITE_PLUGGY_CLIENT_ID e VITE_PLUGGY_CLIENT_SECRET');
+  async initialize(accessToken?: string): Promise<void> {
+    this.accessToken = accessToken ?? null;
+
+    if (!this.accessToken) {
+      this.mockMode = true;
       return;
     }
 
     try {
-      const response = await fetch(`${PLUGGY_API_BASE_URL}/auth`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          clientId: PLUGGY_CLIENT_ID,
-          clientSecret: PLUGGY_CLIENT_SECRET,
-        }),
+      const status = await apiRequest<{ enabled: boolean }>('/api/open-finance/status', {
+        token: this.accessToken,
       });
 
-      if (!response.ok) {
-        throw new Error('Falha ao autenticar com Pluggy');
-      }
-
-      const data: { apiKey: string } = await response.json();
-      this.apiKey = data.apiKey;
+      this.mockMode = !status.enabled;
     } catch (error) {
-      console.error('Erro ao inicializar Open Finance:', error);
-      throw error;
+      this.mockMode = true;
+      console.warn('Open Finance indisponível no backend. Mantendo modo mock.', error);
     }
   }
 
@@ -62,24 +49,15 @@ class OpenFinanceService {
    * Gera token para Connect Widget
    */
   async getConnectToken(): Promise<string> {
-    if (MOCK_MODE) {
+    if (this.mockMode || !this.accessToken) {
       return 'mock-connect-token';
     }
 
     try {
-      const response = await fetch(`${PLUGGY_API_BASE_URL}/connect_token`, {
+      const data = await apiRequest<{ accessToken: string }>('/api/open-finance/connect-token', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-KEY': this.apiKey,
-        },
+        token: this.accessToken,
       });
-
-      if (!response.ok) {
-        throw new Error('Falha ao gerar connect token');
-      }
-
-      const data: PluggyConnectToken = await response.json();
       return data.accessToken;
     } catch (error) {
       console.error('Erro ao gerar connect token:', error);
@@ -91,30 +69,24 @@ class OpenFinanceService {
    * Lista bancos disponíveis
    */
   async listBanks(): Promise<BankInstitution[]> {
-    if (MOCK_MODE) {
+    if (this.mockMode || !this.accessToken) {
       return this.getMockBanks();
     }
 
     try {
-      const response = await fetch(`${PLUGGY_API_BASE_URL}/connectors?countries=BR`, {
-        headers: {
-          'X-API-KEY': this.apiKey,
-        },
+      const data = await apiRequest<{
+        results: Array<{
+          id: number;
+          name: string;
+          codes?: string[];
+          imageUrl?: string;
+          primaryColor?: string;
+        }>;
+      }>('/api/open-finance/connectors', {
+        token: this.accessToken,
       });
 
-      if (!response.ok) {
-        throw new Error('Falha ao buscar bancos');
-      }
-
-      const data: Array<{
-        id: number;
-        name: string;
-        codes?: string[];
-        imageUrl?: string;
-        primaryColor?: string;
-      }> = await response.json();
-      
-      return data.map((connector) => ({
+      return data.results.map((connector) => ({
         id: String(connector.id),
         name: connector.name,
         code: connector.codes?.[0],
@@ -132,22 +104,14 @@ class OpenFinanceService {
    * Busca item (conexão) por ID
    */
   async getItem(itemId: string): Promise<PluggyItem | null> {
-    if (MOCK_MODE) {
+    if (this.mockMode || !this.accessToken) {
       return null;
     }
 
     try {
-      const response = await fetch(`${PLUGGY_API_BASE_URL}/items/${itemId}`, {
-        headers: {
-          'X-API-KEY': this.apiKey,
-        },
+      return await apiRequest<PluggyItem>(`/api/open-finance/items/${itemId}`, {
+        token: this.accessToken,
       });
-
-      if (!response.ok) {
-        return null;
-      }
-
-      return await response.json();
     } catch (error) {
       console.error('Erro ao buscar item:', error);
       return null;
@@ -158,22 +122,14 @@ class OpenFinanceService {
    * Lista contas de um item
    */
   async listAccounts(itemId: string): Promise<PluggyAccount[]> {
-    if (MOCK_MODE) {
+    if (this.mockMode || !this.accessToken) {
       return [];
     }
 
     try {
-      const response = await fetch(`${PLUGGY_API_BASE_URL}/accounts?itemId=${itemId}`, {
-        headers: {
-          'X-API-KEY': this.apiKey,
-        },
+      const data = await apiRequest<{ results: PluggyAccount[] }>(`/api/open-finance/accounts?itemId=${encodeURIComponent(itemId)}`, {
+        token: this.accessToken,
       });
-
-      if (!response.ok) {
-        throw new Error('Falha ao buscar contas');
-      }
-
-      const data = await response.json();
       return data.results || [];
     } catch (error) {
       console.error('Erro ao listar contas:', error);
@@ -181,30 +137,56 @@ class OpenFinanceService {
     }
   }
 
+  async buildConnectionFromItem(itemId: string, fallback?: { bankId?: string; bankName?: string; bankLogo?: string }): Promise<BankConnection> {
+    const item = await this.getItem(itemId);
+    const accounts = await this.listAccounts(itemId);
+
+    const mappedAccounts: BankAccount[] = accounts.map((account) => ({
+      id: `${itemId}-${account.id}`,
+      connectionId: itemId,
+      accountId: account.id,
+      type: this.mapAccountType(account.type),
+      name: account.name,
+      number: account.number?.slice(-4),
+      balance: account.balance,
+      currency: account.currencyCode || 'BRL',
+      lastSyncAt: Date.now(),
+    }));
+
+    return {
+      id: itemId,
+      bankId: fallback?.bankId || String(item?.connector?.id || itemId),
+      bankName: item?.connector?.name || fallback?.bankName || 'Banco conectado',
+      bankLogo: item?.connector?.imageUrl || fallback?.bankLogo,
+      status: this.mapItemStatus(item?.executionStatus),
+      connectedAt: item?.createdAt ? new Date(item.createdAt).getTime() : Date.now(),
+      lastSyncAt: Date.now(),
+      accounts: mappedAccounts,
+      errorMessage: item?.executionStatus === 'LOGIN_ERROR' ? 'Erro de login no banco' : undefined,
+    };
+  }
+
   /**
    * Busca transações de uma conta
    */
   async getTransactions(accountId: string, from?: Date, to?: Date): Promise<PluggyTransaction[]> {
-    if (MOCK_MODE) {
+    if (this.mockMode || !this.accessToken) {
       return [];
     }
 
     try {
-      const params = new URLSearchParams({ accountId });
-      if (from) params.append('from', from.toISOString().split('T')[0]);
-      if (to) params.append('to', to.toISOString().split('T')[0]);
-
-      const response = await fetch(`${PLUGGY_API_BASE_URL}/transactions?${params}`, {
-        headers: {
-          'X-API-KEY': this.apiKey,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Falha ao buscar transações');
+      const params = new URLSearchParams();
+      params.append('accountId', accountId);
+      if (from) {
+        params.append('from', from.toISOString().split('T')[0]);
+      }
+      if (to) {
+        params.append('to', to.toISOString().split('T')[0]);
       }
 
-      const data = await response.json();
+      const data = await apiRequest<{ results: PluggyTransaction[] }>(`/api/open-finance/transactions?${params.toString()}`, {
+        token: this.accessToken,
+      });
       return data.results || [];
     } catch (error) {
       console.error('Erro ao buscar transações:', error);
@@ -239,23 +221,57 @@ class OpenFinanceService {
    * Deleta uma conexão
    */
   async deleteItem(itemId: string): Promise<boolean> {
-    if (MOCK_MODE) {
+    if (this.mockMode || !this.accessToken) {
       return true;
     }
 
     try {
-      const response = await fetch(`${PLUGGY_API_BASE_URL}/items/${itemId}`, {
+      await apiRequest<void>(`/api/open-finance/items/${itemId}`, {
         method: 'DELETE',
-        headers: {
-          'X-API-KEY': this.apiKey,
-        },
+        token: this.accessToken,
       });
-
-      return response.ok;
+      return true;
     } catch (error) {
       console.error('Erro ao deletar conexão:', error);
       return false;
     }
+  }
+
+  private mapAccountType(accountType: string): BankAccount['type'] {
+    const normalizedType = accountType.toLowerCase();
+    if (normalizedType.includes('credit')) {
+      return 'CREDIT_CARD';
+    }
+    if (normalizedType.includes('saving')) {
+      return 'SAVINGS';
+    }
+    return 'CHECKING';
+  }
+
+  private mapItemStatus(executionStatus?: string): BankConnection['status'] {
+    if (!executionStatus) {
+      return 'CONNECTED';
+    }
+
+    const normalizedStatus = executionStatus.toUpperCase();
+
+    if (normalizedStatus.includes('LOGIN_ERROR')) {
+      return 'LOGIN_ERROR';
+    }
+
+    if (normalizedStatus.includes('ERROR')) {
+      return 'ERROR';
+    }
+
+    if (normalizedStatus.includes('UPDATING')) {
+      return 'UPDATING';
+    }
+
+    if (normalizedStatus.includes('CREATED') || normalizedStatus.includes('WAITING')) {
+      return 'PENDING';
+    }
+
+    return 'CONNECTED';
   }
 
   /**

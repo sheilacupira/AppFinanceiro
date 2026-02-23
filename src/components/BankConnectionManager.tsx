@@ -11,14 +11,21 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Building2, Trash2, RefreshCw, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import { openFinanceService } from '@/lib/openFinance';
 import { bankConnectionStorage } from '@/lib/bankConnectionStorage';
+import { useFinance } from '@/contexts/FinanceContext';
+import { categorizeTransaction } from '@/lib/categoryMatcher';
+import { deduplicateTransactions } from '@/lib/transactionDeduplication';
+import { loadSaasTokens } from '@/lib/saasAuthStorage';
 import type { BankInstitution, BankConnection } from '@/types/openFinance';
+import type { Transaction } from '@/types/finance';
 
 export function BankConnectionManager() {
+  const { data, addTransaction } = useFinance();
   const [banks, setBanks] = useState<BankInstitution[]>([]);
   const [connections, setConnections] = useState<BankConnection[]>([]);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     loadData();
@@ -27,10 +34,13 @@ export function BankConnectionManager() {
   const loadData = async () => {
     setLoading(true);
     setError('');
+    setSuccessMessage('');
 
     try {
+      const tokens = loadSaasTokens();
+
       // Inicializa serviço
-      await openFinanceService.initialize();
+      await openFinanceService.initialize(tokens?.accessToken);
 
       // Carrega bancos disponíveis
       const bankList = await openFinanceService.listBanks();
@@ -50,52 +60,67 @@ export function BankConnectionManager() {
   const handleConnect = async (bank: BankInstitution) => {
     setConnecting(true);
     setError('');
+    setSuccessMessage('');
 
     try {
-      // Cria conexão pendente
-      const newConnection: BankConnection = {
-        id: `conn-${Date.now()}`,
+      if (openFinanceService.isMockMode()) {
+        const mockConnectionId = `conn-${Date.now()}`;
+        const mockConnection: BankConnection = {
+          id: mockConnectionId,
+          bankId: bank.id,
+          bankName: bank.name,
+          bankLogo: bank.logo,
+          status: 'CONNECTED',
+          connectedAt: Date.now(),
+          accounts: [
+            {
+              id: `acc-${Date.now()}`,
+              connectionId: mockConnectionId,
+              accountId: 'ext-123',
+              type: 'CHECKING',
+              name: 'Conta Corrente',
+              number: '1234',
+              balance: 5000,
+              currency: 'BRL',
+            },
+          ],
+        };
+
+        bankConnectionStorage.upsert(mockConnection);
+        setConnections(bankConnectionStorage.getAll());
+        setSuccessMessage('Conta conectada em modo demonstração. Configure credenciais Pluggy para dados reais.');
+        return;
+      }
+
+      const connectToken = await openFinanceService.getConnectToken();
+
+      alert(
+        `Conexão real habilitada.\n\n` +
+          `1) Abra seu fluxo Pluggy Connect com este token:\n${connectToken}\n\n` +
+          `2) Após concluir no banco, copie o itemId gerado e cole no próximo campo.`
+      );
+
+      const itemId = window.prompt('Cole o itemId da conexão Pluggy para finalizar a integração:');
+      if (!itemId) {
+        setError('Conexão cancelada: itemId não informado.');
+        return;
+      }
+
+      const trimmedItemId = itemId.trim();
+      const realConnection = await openFinanceService.buildConnectionFromItem(trimmedItemId, {
         bankId: bank.id,
         bankName: bank.name,
         bankLogo: bank.logo,
-        status: 'PENDING',
-        connectedAt: Date.now(),
-        accounts: [],
-      };
+      });
 
-      // Salva conexão
-      bankConnectionStorage.upsert(newConnection);
-      setConnections([...connections, newConnection]);
-
-      // Gera token para Pluggy Connect Widget
-      const connectToken = await openFinanceService.getConnectToken();
-
-      // TODO: Abrir Pluggy Connect Widget em modal/iframe
-      // Por enquanto, apenas simulamos conexão bem-sucedida em modo mock
-      
-      // Simula conexão bem-sucedida (mock)
-      setTimeout(() => {
-        newConnection.status = 'CONNECTED';
-        newConnection.accounts = [
-          {
-            id: `acc-${Date.now()}`,
-            connectionId: newConnection.id,
-            accountId: 'ext-123',
-            type: 'CHECKING',
-            name: 'Conta Corrente',
-            number: '1234',
-            balance: 5000,
-            currency: 'BRL',
-          },
-        ];
-        bankConnectionStorage.upsert(newConnection);
-        setConnections(bankConnectionStorage.getAll());
-        setConnecting(false);
-      }, 2000);
+      bankConnectionStorage.upsert(realConnection);
+      setConnections(bankConnectionStorage.getAll());
+      setSuccessMessage('Conta conectada com sucesso. Clique em Sincronizar para importar entradas e saídas.');
 
     } catch (err) {
       setError('Erro ao conectar banco. Tente novamente.');
       console.error(err);
+    } finally {
       setConnecting(false);
     }
   };
@@ -120,19 +145,62 @@ export function BankConnectionManager() {
 
   const handleSync = async (connection: BankConnection) => {
     setError('');
+    setSuccessMessage('');
     
     try {
       // Atualiza status
       bankConnectionStorage.updateStatus(connection.id, 'UPDATING');
       setConnections(bankConnectionStorage.getAll());
 
-      // TODO: Buscar transações do Pluggy e importar automaticamente
-      
-      // Simula sincronização
-      setTimeout(() => {
+      if (openFinanceService.isMockMode()) {
         bankConnectionStorage.markSynced(connection.id);
         setConnections(bankConnectionStorage.getAll());
-      }, 1500);
+        setSuccessMessage('Sincronização concluída em modo demonstração.');
+        return;
+      }
+
+      const fromDate = new Date();
+      fromDate.setMonth(fromDate.getMonth() - 3);
+
+      const importedCandidates: Transaction[] = [];
+
+      for (const account of connection.accounts) {
+        const pluggyTransactions = await openFinanceService.getTransactions(account.accountId, fromDate, new Date());
+
+        for (const pluggyTx of pluggyTransactions) {
+          const converted = openFinanceService.convertPluggyTransaction(pluggyTx, account.name);
+          const suggestedCategory = categorizeTransaction(converted.description);
+
+          importedCandidates.push({
+            ...converted,
+            id: `pluggy-${connection.id}-${pluggyTx.id}`,
+            categoryId: converted.type === 'income' ? 'other-income' : suggestedCategory.categoryId || 'other-expense',
+          });
+        }
+      }
+
+      const { unique, duplicates } = deduplicateTransactions(importedCandidates, data.transactions);
+
+      unique.forEach((transaction) => {
+        addTransaction(transaction);
+      });
+
+      const refreshedConnection = await openFinanceService.buildConnectionFromItem(connection.id, {
+        bankId: connection.bankId,
+        bankName: connection.bankName,
+        bankLogo: connection.bankLogo,
+      });
+
+      bankConnectionStorage.upsert({
+        ...refreshedConnection,
+        connectedAt: connection.connectedAt,
+      });
+      bankConnectionStorage.markSynced(connection.id);
+      setConnections(bankConnectionStorage.getAll());
+
+      setSuccessMessage(
+        `Sincronização concluída: ${unique.length} transações importadas e ${duplicates.length} duplicadas ignoradas.`
+      );
 
     } catch (err) {
       bankConnectionStorage.updateStatus(connection.id, 'ERROR', 'Falha na sincronização');
@@ -196,6 +264,12 @@ export function BankConnectionManager() {
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {successMessage && (
+        <Alert>
+          <AlertDescription>{successMessage}</AlertDescription>
         </Alert>
       )}
 

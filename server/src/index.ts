@@ -7,6 +7,7 @@ import { meRouter } from './routes/me.js';
 import { transactionsRouter } from './routes/transactions.js';
 import { financeMetaRouter } from './routes/financeMeta.js';
 import { billingRouter, handleStripeWebhook, stripeWebhookHandler } from './routes/billing.js';
+import { openFinanceRouter } from './routes/openFinance.js';
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use('/api/auth', authRouter);
 app.use('/api', meRouter);
 app.use('/api', transactionsRouter);
 app.use('/api', financeMetaRouter);
+app.use('/api', openFinanceRouter);
 app.use('/api/billing', billingRouter);
 
 app.use((_req, res) => {

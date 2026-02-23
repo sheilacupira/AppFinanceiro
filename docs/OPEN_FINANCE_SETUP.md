@@ -48,20 +48,20 @@ A integração com **Open Finance** já possui base funcional no app, com suport
 
 ### 3. Configurar no Projeto
 
-Crie um arquivo `.env.local` na raiz do projeto:
+Configure no backend, em `server/.env`:
 
 ```bash
-# .env.local
-VITE_PLUGGY_CLIENT_ID=seu-client-id-aqui
-VITE_PLUGGY_CLIENT_SECRET=seu-client-secret-aqui
+# server/.env
+PLUGGY_CLIENT_ID=seu-client-id-aqui
+PLUGGY_CLIENT_SECRET=seu-client-secret-aqui
 ```
 
-**⚠️ Nunca comite .env.local no Git!** (já está no .gitignore)
+**⚠️ Nunca comite `server/.env` no Git.**
 
 ### 4. Reiniciar Servidor
 
 ```bash
-npm run dev
+cd server && npm run dev
 ```
 
 Agora o Open Finance estará ativo!
@@ -172,9 +172,10 @@ const response = await fetch('https://api.pluggy.ai/auth', {
 });
 
 // ✅ FAZER (produção)
-const response = await fetch('/api/open-finance/auth', {
-  // Backend faz autenticação com Pluggy
-  // Client secret nunca vai ao frontend
+const response = await fetch('/api/open-finance/connect-token', {
+   method: 'POST',
+   headers: { Authorization: 'Bearer <token>' },
+   // Backend autentica com Pluggy e retorna token temporário
 });
 ```
 
