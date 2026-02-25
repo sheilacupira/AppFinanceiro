@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 const envSchema = z.object({
   PORT: z.coerce.number().default(4000),
-  CORS_ORIGIN: z.string().default('http://localhost:8080'),
+  CORS_ORIGIN: z.string().default('http://localhost:8080,http://localhost:8081'),
   DATABASE_URL: z.string().min(1),
   JWT_ACCESS_SECRET: z.string().min(16),
   JWT_REFRESH_SECRET: z.string().min(16),

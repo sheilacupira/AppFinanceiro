@@ -18,24 +18,54 @@ export function AuthPage() {
     password: '',
   });
 
+  const isValidEmail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+
+    const normalizedEmail = form.email.trim().toLowerCase();
+    const normalizedPassword = form.password.trim();
+
+    if (!isValidEmail(normalizedEmail)) {
+      toast.error('Digite um e-mail válido (ex.: nome@dominio.com).');
+      return;
+    }
+
+    if (normalizedPassword.length < 8) {
+      toast.error('A senha deve ter pelo menos 8 caracteres.');
+      return;
+    }
+
+    if (mode === 'register') {
+      if (form.fullName.trim().length < 2) {
+        toast.error('Informe um nome completo válido.');
+        return;
+      }
+
+      if (form.tenantName.trim().length < 2) {
+        toast.error('Informe um nome de empresa/conta válido.');
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
       if (mode === 'login') {
         await login({
-          email: form.email,
-          password: form.password,
+          email: normalizedEmail,
+          password: normalizedPassword,
         });
 
         toast.success('Login realizado com sucesso');
       } else {
         await register({
-          email: form.email,
-          fullName: form.fullName,
-          password: form.password,
-          tenantName: form.tenantName,
+          email: normalizedEmail,
+          fullName: form.fullName.trim(),
+          password: normalizedPassword,
+          tenantName: form.tenantName.trim(),
         });
 
         toast.success('Conta criada com sucesso');

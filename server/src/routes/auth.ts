@@ -21,8 +21,8 @@ const registerSchema = z.object({
 });
 
 const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
+  email: z.string().trim().min(1),
+  password: z.string().min(1),
 });
 
 const refreshSchema = z.object({
@@ -42,7 +42,8 @@ authRouter.post('/register', async (req, res) => {
     return;
   }
 
-  const { email, fullName, password, tenantName } = parsed.data;
+  const email = parsed.data.email.trim().toLowerCase();
+  const { fullName, password, tenantName } = parsed.data;
   const existingUser = await prisma.user.findUnique({ where: { email } });
 
   if (existingUser) {
@@ -104,6 +105,7 @@ authRouter.post('/register', async (req, res) => {
       id: result.tenant.id,
       name: result.tenant.name,
     },
+    role: result.membership.role,
     accessToken: result.accessToken,
     refreshToken: result.refreshToken,
   });
@@ -116,7 +118,8 @@ authRouter.post('/login', async (req, res) => {
     return;
   }
 
-  const { email, password } = parsed.data;
+  const email = parsed.data.email.toLowerCase();
+  const { password } = parsed.data;
 
   const user = await prisma.user.findUnique({
     where: { email },
@@ -178,8 +181,8 @@ authRouter.post('/login', async (req, res) => {
     tenant: {
       id: membership.tenant.id,
       name: membership.tenant.name,
-      role: membership.role,
     },
+    role: membership.role,
     accessToken,
     refreshToken,
   });

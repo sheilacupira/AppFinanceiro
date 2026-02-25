@@ -19,6 +19,7 @@ type AuthUser = {
 type AuthTenant = {
   id: string;
   name: string;
+  profileType?: 'personal' | 'business';
 };
 
 type AuthSession = {
@@ -33,6 +34,9 @@ interface AuthContextType {
   login: (payload: { email: string; password: string }) => Promise<void>;
   register: (payload: { email: string; fullName: string; password: string; tenantName: string }) => Promise<void>;
   logout: () => Promise<void>;
+  listProfiles: () => Promise<Array<{ tenant: AuthTenant; role: 'OWNER' | 'ADMIN' | 'MEMBER'; isCurrent: boolean }>>;
+  switchProfile: (tenantId: string) => Promise<void>;
+  createProfile: (payload: { name: string; profileType: 'personal' | 'business' }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -49,6 +53,14 @@ type MeResponse = {
   user: AuthUser;
   tenant: AuthTenant;
   role: 'OWNER' | 'ADMIN' | 'MEMBER';
+};
+
+type MembershipResponse = {
+  memberships: Array<{
+    tenant: AuthTenant;
+    role: 'OWNER' | 'ADMIN' | 'MEMBER';
+    isCurrent: boolean;
+  }>;
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -121,50 +133,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [resolveSessionFromTokens]);
 
   const login = useCallback(async (payload: { email: string; password: string }) => {
-    console.log('[AuthContext] login() called with:', payload);
-    try {
-      const response = await apiRequest<AuthResponse>('/api/auth/login', {
+    const response = await apiRequest<AuthResponse>('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+
+    saveSaasTokens({
+      accessToken: response.accessToken,
+      refreshToken: response.refreshToken,
+    });
+
+    applySession(response);
+  }, [applySession]);
+
+  const register = useCallback(
+    async (payload: { email: string; fullName: string; password: string; tenantName: string }) => {
+      const response = await apiRequest<AuthResponse>('/api/auth/register', {
         method: 'POST',
         body: JSON.stringify(payload),
       });
-      console.log('[AuthContext] login response:', response);
 
       saveSaasTokens({
         accessToken: response.accessToken,
         refreshToken: response.refreshToken,
       });
-      console.log('[AuthContext] tokens saved to localStorage');
 
       applySession(response);
-      console.log('[AuthContext] session applied');
-    } catch (error) {
-      console.error('[AuthContext] login error:', error);
-      throw error;
-    }
-  }, [applySession]);
-
-  const register = useCallback(
-    async (payload: { email: string; fullName: string; password: string; tenantName: string }) => {
-      console.log('[AuthContext] register() called with:', payload);
-      try {
-        const response = await apiRequest<AuthResponse>('/api/auth/register', {
-          method: 'POST',
-          body: JSON.stringify(payload),
-        });
-        console.log('[AuthContext] register response:', response);
-
-        saveSaasTokens({
-          accessToken: response.accessToken,
-          refreshToken: response.refreshToken,
-        });
-        console.log('[AuthContext] tokens saved to localStorage');
-
-        applySession(response);
-        console.log('[AuthContext] session applied');
-      } catch (error) {
-        console.error('[AuthContext] register error:', error);
-        throw error;
-      }
     },
     [applySession]
   );
@@ -191,6 +185,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const listProfiles = useCallback(async () => {
+    const tokens = loadSaasTokens();
+    if (!tokens?.accessToken) {
+      return [];
+    }
+
+    const response = await apiRequest<MembershipResponse>('/api/me/memberships', {
+      method: 'GET',
+      token: tokens.accessToken,
+    });
+
+    return response.memberships;
+  }, []);
+
+  const switchProfile = useCallback(async (tenantId: string) => {
+    const tokens = loadSaasTokens();
+    if (!tokens?.accessToken) {
+      throw new Error('Sessão inválida. Faça login novamente.');
+    }
+
+    const response = await apiRequest<AuthResponse>('/api/me/switch-tenant', {
+      method: 'POST',
+      token: tokens.accessToken,
+      body: JSON.stringify({ tenantId }),
+    });
+
+    saveSaasTokens({
+      accessToken: response.accessToken,
+      refreshToken: response.refreshToken,
+    });
+    applySession(response);
+  }, [applySession]);
+
+  const createProfile = useCallback(async (payload: { name: string; profileType: 'personal' | 'business' }) => {
+    const tokens = loadSaasTokens();
+    if (!tokens?.accessToken) {
+      throw new Error('Sessão inválida. Faça login novamente.');
+    }
+
+    const response = await apiRequest<AuthResponse>('/api/me/tenants', {
+      method: 'POST',
+      token: tokens.accessToken,
+      body: JSON.stringify(payload),
+    });
+
+    saveSaasTokens({
+      accessToken: response.accessToken,
+      refreshToken: response.refreshToken,
+    });
+    applySession(response);
+  }, [applySession]);
+
   const value = useMemo(
     () => ({
       status,
@@ -198,8 +244,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       login,
       register,
       logout,
+      listProfiles,
+      switchProfile,
+      createProfile,
     }),
-    [status, session, login, register, logout]
+    [status, session, login, register, logout, listProfiles, switchProfile, createProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

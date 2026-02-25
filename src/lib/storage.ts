@@ -1,7 +1,26 @@
 import { AppData, Transaction, Recurrence, Category, Settings } from '@/types/finance';
 
-const STORAGE_KEY = 'financeiro_data';
+const STORAGE_KEY_PREFIX = 'financeiro_data';
 const CURRENT_SCHEMA_VERSION = 1;
+
+let currentTenantId: string | undefined = undefined;
+
+export function setCurrentTenantId(tenantId: string | undefined): void {
+  currentTenantId = tenantId;
+  console.log(`[storage] Current tenant set to: ${tenantId}`);
+}
+
+export function getCurrentTenantId(): string | undefined {
+  return currentTenantId;
+}
+
+function getStorageKey(): string {
+  if (!currentTenantId) {
+    console.warn('[storage] ⚠️  No tenantId set, using default key');
+    return STORAGE_KEY_PREFIX;
+  }
+  return `${STORAGE_KEY_PREFIX}:${currentTenantId}`;
+}
 
 const defaultCategories: Category[] = [
   { id: 'salary', name: 'Salário', type: 'income', icon: '💼' },
@@ -38,7 +57,8 @@ export function getDefaultData(): AppData {
 
 export function loadData(): AppData {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const key = getStorageKey();
+    const stored = localStorage.getItem(key);
     if (!stored) {
       const defaultData = getDefaultData();
       saveData(defaultData);
@@ -53,7 +73,8 @@ export function loadData(): AppData {
 }
 
 export function saveData(data: AppData): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  const key = getStorageKey();
+  localStorage.setItem(key, JSON.stringify(data));
 }
 
 export function exportData(): string {

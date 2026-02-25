@@ -5,6 +5,7 @@ import { Transaction, Recurrence, Category, Settings, AppData } from '@/types/fi
 import { 
   loadData, 
   saveData, 
+  setCurrentTenantId,
   addTransaction as addTx, 
   updateTransaction as updateTx,
   deleteTransaction as deleteTx,
@@ -70,6 +71,73 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
   const [lastProcessedMonth, setLastProcessedMonth] = useState<string>(`${new Date().getFullYear()}-${new Date().getMonth()}`);
+  const [lastTenantId, setLastTenantId] = useState<string | undefined>(tenantId);
+  const [isTenantSwitching, setIsTenantSwitching] = useState(false);
+
+  // Debug: Log tenant changes
+  useEffect(() => {
+    console.log(`[FinanceContext] CurrentTenant=${tenantId}, LastTenant=${lastTenantId}`);
+  }, [tenantId, lastTenantId]);
+
+  // Update global tenant in storage module
+  useEffect(() => {
+    if (tenantId) {
+      setCurrentTenantId(tenantId);
+      console.log(`[FinanceContext] 🔑 Storage key now: financeiro_data:${tenantId}`);
+    }
+  }, [tenantId]);
+
+  // Clear data when tenant changes (profile switch)
+  useEffect(() => {
+    if (tenantId && tenantId !== lastTenantId) {
+      console.log(`[FinanceContext] 🔄 TENANT CHANGED`);
+      console.log(`  Old tenantId: ${lastTenantId}`);
+      console.log(`  New tenantId: ${tenantId}`);
+      setIsTenantSwitching(true);
+      
+      // Force clear localStorage completely
+      console.log('[FinanceContext] 🗑️  Clearing localStorage...');
+      localStorage.removeItem('financeiro_data');
+      
+      // Create fresh empty data
+      const freshData = {
+        schemaVersion: 1,
+        transactions: [],
+        recurrences: [],
+        categories: [
+          { id: 'salary', name: 'Salário', type: 'income', icon: '💼' },
+          { id: 'freelance', name: 'Freelance', type: 'income', icon: '💻' },
+          { id: 'investment', name: 'Investimentos', type: 'income', icon: '📈' },
+          { id: 'other-income', name: 'Outros (Entrada)', type: 'income', icon: '💰' },
+          { id: 'tithe', name: 'Dízimo', type: 'expense', icon: '⛪' },
+          { id: 'housing', name: 'Moradia', type: 'expense', icon: '🏠' },
+          { id: 'food', name: 'Alimentação', type: 'expense', icon: '🍽️' },
+          { id: 'transport', name: 'Transporte', type: 'expense', icon: '🚗' },
+          { id: 'health', name: 'Saúde', type: 'expense', icon: '🏥' },
+          { id: 'education', name: 'Educação', type: 'expense', icon: '📚' },
+          { id: 'entertainment', name: 'Lazer', type: 'expense', icon: '🎬' },
+          { id: 'shopping', name: 'Compras', type: 'expense', icon: '🛍️' },
+          { id: 'bills', name: 'Contas', type: 'expense', icon: '📄' },
+          { id: 'consortium', name: 'Consórcio', type: 'expense', icon: '🏦' },
+          { id: 'other-expense', name: 'Outros (Saída)', type: 'expense', icon: '💸' },
+        ],
+        settings: {
+          isTither: false,
+          theme: 'system',
+        },
+      } as AppData;
+      saveData(freshData);
+      console.log('[FinanceContext] ✅ Fresh data saved');
+      setData(freshData);
+      setLastTenantId(tenantId);
+      
+      // End switching state after a small delay to allow React to apply changes
+      setTimeout(() => {
+        console.log('[FinanceContext] ✅ Tenant switch complete, resuming sync');
+        setIsTenantSwitching(false);
+      }, 100);
+    }
+  }, [tenantId, lastTenantId]);
 
   useEffect(() => {
     // Dados de amostra desabilitados - começar vazio
@@ -103,7 +171,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!isSaasMode || status !== 'authenticated' || !tenantId) {
+    if (!isSaasMode || status !== 'authenticated' || !tenantId || isTenantSwitching) {
+      if (isTenantSwitching) {
+        console.log('[FinanceContext] ⏸️  Sync paused: tenant switching in progress');
+      }
       return;
     }
 
@@ -116,34 +187,42 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
     const runSync = async () => {
       try {
+        console.log(`[FinanceContext] 🔄 Starting sync for tenantId=${tenantId}`);
         await processSyncQueue(tokens.accessToken);
 
         const localData = loadData();
+        console.log(`[FinanceContext] 📦 Local data: ${localData.transactions.length} transactions`);
+        
+        // IMPORTANT: Only sync local transactions to backend, don't merge with backend data
+        // This prevents old tenant data from being copied to new tenant
         const [syncedTransactions, syncedMeta] = await Promise.all([
-          syncTransactions(localData.transactions, tokens.accessToken),
+          syncTransactions([], tokens.accessToken), // Empty array - don't sync old data
           syncFinanceMeta(
             {
-              recurrences: localData.recurrences,
-              categories: localData.categories,
+              recurrences: [],  // Empty - don't sync old data
+              categories: localData.categories, // Keep default categories
               settings: localData.settings,
             },
             tokens.accessToken
           ),
         ]);
 
+        console.log(`[FinanceContext] ☁️  Fetched from backend: ${syncedTransactions.length} transactions`);
+        
         saveData({
           ...localData,
           transactions: syncedTransactions,
-          recurrences: syncedMeta.recurrences,
-          categories: syncedMeta.categories,
+          recurrences: syncedMeta.recurrences || [],
+          categories: syncedMeta.categories || localData.categories,
           settings: syncedMeta.settings ?? localData.settings,
         });
 
         if (!cancelled) {
           setData(loadData());
+          console.log('[FinanceContext] ✅ Sync complete');
         }
       } catch (error) {
-        console.error('Failed to synchronize transactions with cloud', error);
+        console.error('[FinanceContext] ❌ Sync failed:', error);
       }
     };
 
@@ -152,10 +231,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [status, tenantId]);
+  }, [status, tenantId, isTenantSwitching]);
 
   useEffect(() => {
-    if (!isSaasMode || status !== 'authenticated' || !tenantId) {
+    if (!isSaasMode || status !== 'authenticated' || !tenantId || isTenantSwitching) {
       return;
     }
 
@@ -184,7 +263,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener('online', onOnline);
       window.clearInterval(intervalId);
     };
-  }, [getAccessToken, status, tenantId]);
+  }, [getAccessToken, status, tenantId, isTenantSwitching]);
 
   const navigateMonth = useCallback((direction: 'prev' | 'next') => {
     if (direction === 'prev') {

@@ -60,6 +60,7 @@ class OpenFinanceService {
       });
       return data.accessToken;
     } catch (error) {
+      this.mockMode = true;
       console.error('Erro ao gerar connect token:', error);
       throw error;
     }
@@ -95,6 +96,7 @@ class OpenFinanceService {
         type: 'PERSONAL_BANK',
       }));
     } catch (error) {
+      this.mockMode = true;
       console.error('Erro ao listar bancos:', error);
       return this.getMockBanks();
     }
@@ -283,7 +285,6 @@ class OpenFinanceService {
         id: '1',
         name: 'Banco do Brasil',
         code: '001',
-        logo: 'https://cdn.pluggy.ai/assets/connector-icons/BR/001.png',
         primaryColor: '#FFCC00',
         type: 'PERSONAL_BANK',
       },
@@ -291,7 +292,6 @@ class OpenFinanceService {
         id: '2',
         name: 'Itaú',
         code: '341',
-        logo: 'https://cdn.pluggy.ai/assets/connector-icons/BR/341.png',
         primaryColor: '#EC7000',
         type: 'PERSONAL_BANK',
       },
@@ -299,7 +299,6 @@ class OpenFinanceService {
         id: '3',
         name: 'Bradesco',
         code: '237',
-        logo: 'https://cdn.pluggy.ai/assets/connector-icons/BR/237.png',
         primaryColor: '#CC092F',
         type: 'PERSONAL_BANK',
       },
@@ -307,7 +306,6 @@ class OpenFinanceService {
         id: '4',
         name: 'Caixa Econômica',
         code: '104',
-        logo: 'https://cdn.pluggy.ai/assets/connector-icons/BR/104.png',
         primaryColor: '#0077C8',
         type: 'PERSONAL_BANK',
       },
@@ -315,7 +313,6 @@ class OpenFinanceService {
         id: '5',
         name: 'Santander',
         code: '033',
-        logo: 'https://cdn.pluggy.ai/assets/connector-icons/BR/033.png',
         primaryColor: '#EC0000',
         type: 'PERSONAL_BANK',
       },
@@ -323,7 +320,6 @@ class OpenFinanceService {
         id: '6',
         name: 'Nubank',
         code: '260',
-        logo: 'https://cdn.pluggy.ai/assets/connector-icons/BR/260.png',
         primaryColor: '#820AD1',
         type: 'PERSONAL_BANK',
       },
@@ -331,7 +327,6 @@ class OpenFinanceService {
         id: '7',
         name: 'Inter',
         code: '077',
-        logo: 'https://cdn.pluggy.ai/assets/connector-icons/BR/077.png',
         primaryColor: '#FF7A00',
         type: 'PERSONAL_BANK',
       },

@@ -243,6 +243,14 @@ export function BankConnectionManager() {
     }
   };
 
+  const shouldRenderLogo = (logo?: string): boolean => {
+    if (!logo) {
+      return false;
+    }
+
+    return !logo.includes('cdn.pluggy.ai/assets/connector-icons');
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -282,7 +290,7 @@ export function BankConnectionManager() {
               <Card key={connection.id}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <div className="flex items-center gap-3">
-                    {connection.bankLogo ? (
+                    {shouldRenderLogo(connection.bankLogo) ? (
                       <img
                         src={connection.bankLogo}
                         alt={connection.bankName}
@@ -386,7 +394,7 @@ export function BankConnectionManager() {
                 onClick={() => !isConnected && !connecting && handleConnect(bank)}
               >
                 <CardContent className="flex flex-col items-center p-4 space-y-2">
-                  {bank.logo ? (
+                  {shouldRenderLogo(bank.logo) ? (
                     <img
                       src={bank.logo}
                       alt={bank.name}

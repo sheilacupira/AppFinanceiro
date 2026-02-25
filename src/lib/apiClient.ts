@@ -34,8 +34,25 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     let message = fallbackMessage;
 
     try {
-      const errorBody = await response.json();
-      message = typeof errorBody?.error === 'string' ? errorBody.error : fallbackMessage;
+      const errorBody = await response.json() as {
+        error?: string;
+        details?: {
+          fieldErrors?: Record<string, string[] | undefined>;
+        };
+      };
+
+      const baseError = typeof errorBody?.error === 'string' ? errorBody.error : fallbackMessage;
+      const fieldErrors = errorBody?.details?.fieldErrors;
+
+      if (baseError === 'Invalid payload' && fieldErrors) {
+        const details = Object.entries(fieldErrors)
+          .flatMap(([field, errors]) => (errors ?? []).map((error) => `${field}: ${error}`))
+          .join(' | ');
+
+        message = details ? `${baseError}: ${details}` : baseError;
+      } else {
+        message = baseError;
+      }
     } catch {
       message = fallbackMessage;
     }

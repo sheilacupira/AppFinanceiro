@@ -18,9 +18,12 @@ const transactionQuerySchema = z.object({
   to: z.string().optional(),
 });
 
-openFinanceRouter.get('/open-finance/status', (_req, res) => {
+openFinanceRouter.get('/open-finance/status', async (_req, res) => {
+  const configured = Boolean(env.PLUGGY_CLIENT_ID && env.PLUGGY_CLIENT_SECRET);
+  const enabled = configured ? await openFinanceClient.isAvailable() : false;
+
   res.json({
-    enabled: Boolean(env.PLUGGY_CLIENT_ID && env.PLUGGY_CLIENT_SECRET),
+    enabled,
   });
 });
 

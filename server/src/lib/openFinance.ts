@@ -6,6 +6,11 @@ interface PluggyAuthResponse {
   apiKey: string;
 }
 
+interface PluggyErrorResponse {
+  message?: string;
+  details?: string;
+}
+
 class OpenFinanceClient {
   private apiKey: string | null = null;
 
@@ -30,7 +35,21 @@ class OpenFinanceClient {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to authenticate with Pluggy');
+      let details = '';
+
+      try {
+        const body = (await response.json()) as PluggyErrorResponse;
+        details = body?.message || body?.details || '';
+      } catch {
+        details = '';
+      }
+
+      const statusDetails = `status ${response.status}`;
+      const message = details
+        ? `Failed to authenticate with Pluggy: ${details} (${statusDetails})`
+        : `Failed to authenticate with Pluggy (${statusDetails})`;
+
+      throw new Error(message);
     }
 
     const data = (await response.json()) as PluggyAuthResponse;
@@ -111,6 +130,19 @@ class OpenFinanceClient {
     await this.request<void>(`/items/${itemId}`, {
       method: 'DELETE',
     });
+  }
+
+  async isAvailable(): Promise<boolean> {
+    if (!env.PLUGGY_CLIENT_ID || !env.PLUGGY_CLIENT_SECRET) {
+      return false;
+    }
+
+    try {
+      await this.authenticate();
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 

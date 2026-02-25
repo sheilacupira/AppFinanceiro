@@ -11,7 +11,31 @@ import { openFinanceRouter } from './routes/openFinance.js';
 
 const app = express();
 
-app.use(cors({ origin: env.CORS_ORIGIN }));
+const configuredOrigins = env.CORS_ORIGIN.split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const localDevOrigins = [
+  'http://localhost:8080',
+  'http://localhost:8081',
+  'http://127.0.0.1:8080',
+  'http://127.0.0.1:8081',
+];
+
+const allowedOrigins = new Set([...configuredOrigins, ...localDevOrigins]);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.has(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`Origin ${origin} is not allowed by Access-Control-Allow-Origin`));
+    },
+  })
+);
 
 app.post('/api/billing/webhook', stripeWebhookHandler, (req, res) => {
   void handleStripeWebhook(req, res);
