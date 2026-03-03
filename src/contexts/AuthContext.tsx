@@ -21,6 +21,8 @@ type AuthTenant = {
   name: string;
   profileType?: 'personal' | 'business';
   billingPlan?: 'free' | 'pro' | 'enterprise';
+  cnpj?: string;
+  razaoSocial?: string;
 };
 
 type AuthSession = {
@@ -38,6 +40,7 @@ interface AuthContextType {
   listProfiles: () => Promise<Array<{ tenant: AuthTenant; role: 'OWNER' | 'ADMIN' | 'MEMBER'; isCurrent: boolean }>>;
   switchProfile: (tenantId: string) => Promise<void>;
   createProfile: (payload: { name: string; profileType: 'personal' | 'business' }) => Promise<void>;
+  updateTenant: (payload: { name?: string; cnpj?: string | null; razaoSocial?: string | null }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -231,6 +234,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     applySession(response);
   }, [applySession]);
 
+  const updateTenant = useCallback(async (payload: { name?: string; cnpj?: string | null; razaoSocial?: string | null }) => {
+    const tokens = loadSaasTokens();
+    if (!tokens?.accessToken) {
+      throw new Error('Sessão inválida. Faça login novamente.');
+    }
+
+    const response = await apiRequest<{ tenant: AuthTenant }>('/api/me/tenant', {
+      method: 'PATCH',
+      token: tokens.accessToken,
+      body: JSON.stringify(payload),
+    });
+
+    setSession((prev) =>
+      prev ? { ...prev, tenant: { ...prev.tenant, ...response.tenant } } : prev
+    );
+  }, []);
+
   const value = useMemo(
     () => ({
       status,
@@ -241,8 +261,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       listProfiles,
       switchProfile,
       createProfile,
+      updateTenant,
     }),
-    [status, session, login, register, logout, listProfiles, switchProfile, createProfile]
+    [status, session, login, register, logout, listProfiles, switchProfile, createProfile, updateTenant]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

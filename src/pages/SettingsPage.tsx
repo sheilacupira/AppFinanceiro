@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Moon, Sun, Church } from 'lucide-react';
+import { Moon, Sun, Church, Building2 } from 'lucide-react';
 import { isSaasMode } from '@/config/runtime';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFinance } from '@/contexts/FinanceContext';
@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 
 export function SettingsPage() {
   const { data, updateSettings } = useFinance();
-  const { session, logout, listProfiles, switchProfile, createProfile } = useAuth();
+  const { session, logout, listProfiles, switchProfile, createProfile, updateTenant } = useAuth();
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
 
   // Apply saved theme on mount
@@ -34,7 +34,11 @@ export function SettingsPage() {
   const [newProfileType, setNewProfileType] = useState<'personal' | 'business'>('personal');
   const [switchingProfile, setSwitchingProfile] = useState(false);
   const [creatingProfile, setCreatingProfile] = useState(false);
+  const [pjCnpj, setPjCnpj] = useState('');
+  const [pjRazaoSocial, setPjRazaoSocial] = useState('');
+  const [savingPJData, setSavingPJData] = useState(false);
   const currentProfile = profiles.find((profile) => profile.isCurrent);
+  const isBusinessProfile = (session?.tenant.profileType ?? currentProfile?.tenant.profileType) === 'business';
   const activeBillingPlan = session?.tenant.billingPlan ?? currentProfile?.tenant.billingPlan ?? 'free';
   const canCreateBusinessProfile = activeBillingPlan !== 'free';
   const activeBillingPlanLabel =
@@ -52,6 +56,13 @@ export function SettingsPage() {
 
     void loadProfiles();
   }, [listProfiles, session]);
+
+  useEffect(() => {
+    if (session?.tenant.profileType === 'business') {
+      setPjCnpj(session.tenant.cnpj ?? '');
+      setPjRazaoSocial(session.tenant.razaoSocial ?? '');
+    }
+  }, [session?.tenant.cnpj, session?.tenant.profileType, session?.tenant.razaoSocial]);
 
   const handleSwitchProfile = async (tenantId: string) => {
     setSwitchingProfile(true);
@@ -93,6 +104,22 @@ export function SettingsPage() {
       toast.error(message);
     } finally {
       setCreatingProfile(false);
+    }
+  };
+
+  const handleSavePJData = async () => {
+    setSavingPJData(true);
+    try {
+      await updateTenant({
+        cnpj: pjCnpj.trim() || null,
+        razaoSocial: pjRazaoSocial.trim() || null,
+      });
+      toast.success('Dados da empresa salvos');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro ao salvar dados';
+      toast.error(message);
+    } finally {
+      setSavingPJData(false);
     }
   };
 
@@ -242,6 +269,43 @@ export function SettingsPage() {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {/* PJ Company Data */}
+      {isSaasMode && session && isBusinessProfile && (
+        <div className="bg-card rounded-lg border border-border p-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+              <Building2 className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-medium">Dados da Empresa (PJ)</p>
+              <p className="text-sm text-muted-foreground">CNPJ e razão social do perfil atual</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">CNPJ</label>
+              <Input
+                placeholder="00.000.000/0001-00"
+                value={pjCnpj}
+                onChange={(e) => setPjCnpj(e.target.value)}
+                maxLength={18}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Razão Social</label>
+              <Input
+                placeholder="Ex: Empresa Exemplo LTDA"
+                value={pjRazaoSocial}
+                onChange={(e) => setPjRazaoSocial(e.target.value)}
+              />
+            </div>
+            <Button className="w-full" size="sm" disabled={savingPJData} onClick={() => void handleSavePJData()}>
+              {savingPJData ? 'Salvando...' : 'Salvar dados'}
+            </Button>
+          </div>
         </div>
       )}
 

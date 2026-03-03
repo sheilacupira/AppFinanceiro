@@ -35,13 +35,15 @@ type SyncOperationPayloadMap = {
   'importBatch.delete': { batchId: string };
 };
 
-export interface SyncQueueItem<T extends SyncOperationType = SyncOperationType> {
-  id: string;
-  type: T;
-  payload: SyncOperationPayloadMap[T];
-  createdAt: string;
-  attempts: number;
-}
+export type SyncQueueItem<T extends SyncOperationType = SyncOperationType> = T extends SyncOperationType
+  ? {
+      id: string;
+      type: T;
+      payload: SyncOperationPayloadMap[T];
+      createdAt: string;
+      attempts: number;
+    }
+  : never;
 
 const SYNC_QUEUE_STORAGE_KEY = 'financeiro_sync_queue';
 
@@ -125,7 +127,7 @@ const buildItem = <T extends SyncOperationType>(
   payload,
   createdAt: new Date().toISOString(),
   attempts: 0,
-});
+}) as SyncQueueItem<T>;
 
 export function enqueueSyncOperation<T extends SyncOperationType>(
   type: T,

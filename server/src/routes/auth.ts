@@ -59,7 +59,7 @@ authRouter.post('/register', async (req, res) => {
     });
 
     const tenant = await tx.tenant.create({
-      data: { name: tenantName },
+      data: { name: tenantName, profileType: 'personal' },
     });
 
     const membership = await tx.membership.create({
@@ -104,6 +104,7 @@ authRouter.post('/register', async (req, res) => {
     tenant: {
       id: result.tenant.id,
       name: result.tenant.name,
+      profileType: result.tenant.profileType as 'personal' | 'business',
       billingPlan: result.tenant.billingPlan,
     },
     role: result.membership.role,

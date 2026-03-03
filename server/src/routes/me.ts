@@ -15,10 +15,15 @@ const switchTenantSchema = z.object({
 const createTenantSchema = z.object({
   name: z.string().min(2),
   profileType: z.enum(['personal', 'business']),
+  cnpj: z.string().optional(),
+  razaoSocial: z.string().optional(),
 });
 
-const PERSONAL_PREFIX = 'PF:';
-const BUSINESS_PREFIX = 'PJ:';
+const updateTenantSchema = z.object({
+  name: z.string().min(2).optional(),
+  cnpj: z.string().nullable().optional(),
+  razaoSocial: z.string().nullable().optional(),
+});
 
 const refreshExpiryDate = () => {
   const expiry = new Date();
@@ -26,24 +31,14 @@ const refreshExpiryDate = () => {
   return expiry;
 };
 
-const withTenantPrefix = (name: string, profileType: 'personal' | 'business'): string => {
-  const prefix = profileType === 'personal' ? PERSONAL_PREFIX : BUSINESS_PREFIX;
-  return `${prefix} ${name.trim()}`;
-};
-
-const toProfileType = (tenantName: string): 'personal' | 'business' => {
-  return tenantName.startsWith(PERSONAL_PREFIX) ? 'personal' : 'business';
-};
-
-const toDisplayName = (tenantName: string): string => {
-  if (tenantName.startsWith(PERSONAL_PREFIX)) {
-    return tenantName.replace(PERSONAL_PREFIX, '').trim();
-  }
-  if (tenantName.startsWith(BUSINESS_PREFIX)) {
-    return tenantName.replace(BUSINESS_PREFIX, '').trim();
-  }
-  return tenantName;
-};
+const toTenantShape = (tenant: { id: string; name: string; profileType: string; billingPlan: string; cnpj: string | null; razaoSocial: string | null }) => ({
+  id: tenant.id,
+  name: tenant.name,
+  profileType: tenant.profileType as 'personal' | 'business',
+  billingPlan: tenant.billingPlan,
+  cnpj: tenant.cnpj ?? undefined,
+  razaoSocial: tenant.razaoSocial ?? undefined,
+});
 
 meRouter.get('/me', requireAuth, async (req, res) => {
   const auth = req.auth;
@@ -78,10 +73,7 @@ meRouter.get('/me', requireAuth, async (req, res) => {
       createdAt: membership.user.createdAt,
     },
     tenant: {
-      id: membership.tenant.id,
-      name: toDisplayName(membership.tenant.name),
-      profileType: toProfileType(membership.tenant.name),
-      billingPlan: membership.tenant.billingPlan,
+      ...toTenantShape(membership.tenant),
       createdAt: membership.tenant.createdAt,
     },
     role: membership.role,
@@ -109,12 +101,7 @@ meRouter.get('/me/memberships', requireAuth, async (req, res) => {
 
   res.json({
     memberships: memberships.map((membership) => ({
-      tenant: {
-        id: membership.tenant.id,
-        name: toDisplayName(membership.tenant.name),
-        profileType: toProfileType(membership.tenant.name),
-        billingPlan: membership.tenant.billingPlan,
-      },
+      tenant: toTenantShape(membership.tenant),
       role: membership.role,
       isCurrent: membership.tenantId === auth.tenantId,
     })),
@@ -180,12 +167,7 @@ meRouter.post('/me/switch-tenant', requireAuth, async (req, res) => {
       email: targetMembership.user.email,
       fullName: targetMembership.user.fullName,
     },
-    tenant: {
-      id: targetMembership.tenant.id,
-      name: toDisplayName(targetMembership.tenant.name),
-      profileType: toProfileType(targetMembership.tenant.name),
-      billingPlan: targetMembership.tenant.billingPlan,
-    },
+    tenant: toTenantShape(targetMembership.tenant),
     role: targetMembership.role,
     accessToken,
     refreshToken,
@@ -234,7 +216,10 @@ meRouter.post('/me/tenants', requireAuth, async (req, res) => {
   const created = await prisma.$transaction(async (tx) => {
     const tenant = await tx.tenant.create({
       data: {
-        name: withTenantPrefix(parsed.data.name, parsed.data.profileType),
+        name: parsed.data.name.trim(),
+        profileType: parsed.data.profileType,
+        cnpj: parsed.data.cnpj ?? null,
+        razaoSocial: parsed.data.razaoSocial ?? null,
       },
     });
 
@@ -277,14 +262,43 @@ meRouter.post('/me/tenants', requireAuth, async (req, res) => {
       email: existingUser.email,
       fullName: existingUser.fullName,
     },
-    tenant: {
-      id: created.tenant.id,
-      name: toDisplayName(created.tenant.name),
-      profileType: toProfileType(created.tenant.name),
-      billingPlan: created.tenant.billingPlan,
-    },
+    tenant: toTenantShape(created.tenant),
     role: created.membership.role,
     accessToken: created.accessToken,
     refreshToken: created.refreshToken,
   });
+});
+
+meRouter.patch('/me/tenant', requireAuth, async (req, res) => {
+  const auth = req.auth;
+  if (!auth) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  const parsed = updateTenantSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Invalid payload', details: parsed.error.flatten() });
+    return;
+  }
+
+  const membership = await prisma.membership.findUnique({
+    where: { userId_tenantId: { userId: auth.userId, tenantId: auth.tenantId } },
+  });
+
+  if (!membership || membership.role === MembershipRole.MEMBER) {
+    res.status(403).json({ error: 'Apenas OWNER ou ADMIN podem editar o perfil' });
+    return;
+  }
+
+  const updated = await prisma.tenant.update({
+    where: { id: auth.tenantId },
+    data: {
+      ...(parsed.data.name !== undefined && { name: parsed.data.name.trim() }),
+      ...(parsed.data.cnpj !== undefined && { cnpj: parsed.data.cnpj }),
+      ...(parsed.data.razaoSocial !== undefined && { razaoSocial: parsed.data.razaoSocial }),
+    },
+  });
+
+  res.json({ tenant: toTenantShape(updated) });
 });

@@ -27,6 +27,9 @@ model User {
 model Tenant {
   id            String         @id @default(cuid())
   name          String
+  profileType   String         @default("personal") // 'personal' | 'business'
+  cnpj          String?
+  razaoSocial   String?
   stripeCustomerId String?     @unique
   stripeSubscriptionId String?
   billingPlan   String         @default("free")
