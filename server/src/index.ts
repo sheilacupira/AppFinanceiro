@@ -8,6 +8,8 @@ import { transactionsRouter } from './routes/transactions.js';
 import { financeMetaRouter } from './routes/financeMeta.js';
 import { billingRouter, handleStripeWebhook, stripeWebhookHandler } from './routes/billing.js';
 import { openFinanceRouter } from './routes/openFinance.js';
+import { invitesRouter } from './routes/invites.js';
+import { membersRouter } from './routes/members.js';
 
 const app = express();
 
@@ -49,6 +51,8 @@ app.use('/api', meRouter);
 app.use('/api', transactionsRouter);
 app.use('/api', financeMetaRouter);
 app.use('/api', openFinanceRouter);
+app.use('/api', invitesRouter);
+app.use('/api', membersRouter);
 app.use('/api/billing', billingRouter);
 
 app.use((_req, res) => {
