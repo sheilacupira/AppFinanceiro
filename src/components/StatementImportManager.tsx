@@ -102,7 +102,7 @@ export function StatementImportManager() {
       setErrors(result.errors);
 
       if (!result.items.length && !result.errors.length) {
-        toast('Nenhuma transacao valida encontrada.');
+        toast.warning('Nenhuma transação válida encontrada.');
         if (detectedFormat === 'csv') {
           setShowMapping(true);
         }

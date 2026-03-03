@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { X } from 'lucide-react';
 import { Recurrence, TransactionType, Category } from '@/types/finance';
 import { formatCurrencyInput, parseCurrencyInput, generateId } from '@/lib/finance';
@@ -39,8 +39,9 @@ export function RecurrenceForm({
   const [source, setSource] = useState(recurrence?.source || '');
   const [createAsPending, setCreateAsPending] = useState(recurrence?.createAsPending ?? true);
 
-  const filteredCategories = categories.filter(
-    c => c.type === type || c.type === 'both'
+  const filteredCategories = useMemo(
+    () => categories.filter(c => c.type === type || c.type === 'both'),
+    [categories, type]
   );
 
   useEffect(() => {
@@ -57,7 +58,10 @@ export function RecurrenceForm({
     e.preventDefault();
     
     const amount = parseCurrencyInput(amountDisplay);
-    if (amount <= 0) return;
+    if (amount <= 0) {
+      // Show user feedback instead of silently ignoring
+      return;
+    }
     
     const newRecurrence: Recurrence = {
       id: recurrence?.id || generateId(),

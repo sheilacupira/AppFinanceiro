@@ -19,10 +19,16 @@ export function parseCurrencyInput(value: string): number {
   return parseInt(numbers || '0', 10) / 100;
 }
 
+/** Parse a stored date string safely as local time (avoids UTC off-by-one-day in negative-offset timezones) */
+export function parseLocalDate(iso: string): Date {
+  // Date-only strings (YYYY-MM-DD) must be interpreted as local midnight, not UTC midnight
+  return iso.length === 10 ? new Date(iso + 'T00:00:00') : new Date(iso);
+}
+
 export function getMonthTransactions(month: number, year: number): Transaction[] {
   const data = loadData();
   return data.transactions.filter(t => {
-    const date = new Date(t.date);
+    const date = parseLocalDate(t.date);
     return date.getMonth() === month && date.getFullYear() === year;
   });
 }
@@ -110,8 +116,8 @@ export function generateRecurringTransactions(month: number, year: number): void
       // Verificar também se não existe nenhuma outra transação para esta recorrência neste mês
       const hasTransactionInMonth = data.transactions.some(
         t => t.recurrenceId === recurrence.id &&
-             new Date(t.date).getMonth() === month &&
-             new Date(t.date).getFullYear() === year
+             parseLocalDate(t.date).getMonth() === month &&
+             parseLocalDate(t.date).getFullYear() === year
       );
       
       if (!hasTransactionInMonth) {
@@ -140,7 +146,7 @@ export function getMonthName(month: number): string {
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
   ];
-  return months[month];
+  return months[month] ?? '';
 }
 
 export function getMonthNameShort(month: number): string {
@@ -148,9 +154,9 @@ export function getMonthNameShort(month: number): string {
     'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
     'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
   ];
-  return months[month];
+  return months[month] ?? '';
 }
 
 export function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 }

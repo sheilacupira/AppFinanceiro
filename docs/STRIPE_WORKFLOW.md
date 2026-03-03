@@ -6,7 +6,7 @@ Este guia mostra o fluxo completo do início ao fim para configurar os preços d
 
 ## 🎯 Objetivo final
 
-Permitir que usuários assinem os planos Pro e Enterprise diretamente pelo app, com pagamento processado pelo Stripe.
+Permitir que usuários assinem os planos Pró e Premium diretamente pelo app, com pagamento processado pelo Stripe.
 
 ---
 
@@ -80,10 +80,10 @@ https://dashboard.stripe.com/register
 6. Save product
 7. **Copiar Price IDs** (3 pontinhos → Copy price ID)
 
-**Plano Enterprise:**
+**Plano Premium:**
 1. Products → Add product
-2. Name: `AppFinanceiro Enterprise`
-3. Description: `Plano Enterprise para empresas`
+2. Name: `AppFinanceiro Premium`
+3. Description: `Plano Premium para empresas`
 4. Add price → R$ 99,90 BRL, Monthly
 5. Add another price → R$ 999,00 BRL, Yearly
 6. Save product
@@ -215,7 +215,7 @@ STRIPE_PRICE_ENTERPRISE_YEARLY=price_1...
 #    - Checkout completo
 #    - Webhook recebido
 #    - Subscription ativa no banco
-#    - Usuário tem acesso aos recursos Pro/Enterprise
+#    - Usuário tem acesso aos recursos Pró/Premium
 ```
 
 ---
@@ -276,7 +276,7 @@ STRIPE_PRICE_ENTERPRISE_YEARLY=price_1...
 
 ```
 [ ] Products criados no Stripe Dashboard
-[ ] Prices criados (mensal e anual, Pro e Enterprise)
+[ ] Prices criados (mensal e anual, Pró e Premium)
 [ ] API Keys copiadas
 [ ] server/.env configurado
 [ ] ./validate-stripe.sh passou sem erros

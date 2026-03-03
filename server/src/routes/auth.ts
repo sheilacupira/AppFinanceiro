@@ -104,6 +104,7 @@ authRouter.post('/register', async (req, res) => {
     tenant: {
       id: result.tenant.id,
       name: result.tenant.name,
+      billingPlan: result.tenant.billingPlan,
     },
     role: result.membership.role,
     accessToken: result.accessToken,
@@ -181,6 +182,7 @@ authRouter.post('/login', async (req, res) => {
     tenant: {
       id: membership.tenant.id,
       name: membership.tenant.name,
+      billingPlan: membership.tenant.billingPlan,
     },
     role: membership.role,
     accessToken,

@@ -12,7 +12,7 @@ Referência rápida para configuração Stripe em produção.
   ├─ Price Mensal: R$ 29,90 BRL → price_1...
   └─ Price Anual: R$ 299,00 BRL → price_1...
 
-✅ Product: AppFinanceiro Enterprise
+✅ Product: AppFinanceiro Premium
   ├─ Price Mensal: R$ 99,90 BRL → price_1...
   └─ Price Anual: R$ 999,00 BRL → price_1...
 
@@ -38,8 +38,8 @@ Referência rápida para configuração Stripe em produção.
 # 4. Testar fluxo
 ✅ Checkout Pro Mensal
 ✅ Checkout Pro Anual  
-✅ Checkout Enterprise Mensal
-✅ Checkout Enterprise Anual
+✅ Checkout Premium Mensal
+✅ Checkout Premium Anual
 ✅ Customer Portal (gerenciar assinatura)
 ✅ Cancelamento
 ✅ Webhooks recebidos
@@ -73,7 +73,7 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PRICE_PRO_MONTHLY=price_1NXZtest123456
 STRIPE_PRICE_PRO_YEARLY=price_1NXZtest789012
 
-# Enterprise
+# Premium
 STRIPE_PRICE_ENTERPRISE_MONTHLY=price_1NXZtestABC123
 STRIPE_PRICE_ENTERPRISE_YEARLY=price_1NXZtestDEF456
 ```

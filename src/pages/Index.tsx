@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { isSaasMode } from '@/config/runtime';
 import { useAuth } from '@/contexts/AuthContext';
 import { FinanceProvider } from '@/contexts/FinanceContext';
@@ -45,8 +46,9 @@ export default function Index() {
 
   if (isSaasMode && status === 'loading') {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center text-sm text-muted-foreground">
-        Carregando sessão...
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-3">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Carregando sessão...</p>
       </div>
     );
   }

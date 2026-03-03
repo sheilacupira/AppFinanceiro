@@ -17,7 +17,7 @@ Este guia ensina como criar Products e Prices no Stripe Dashboard e configurá-l
 | Plano         | Mensal    | Anual       |
 |---------------|-----------|-------------|
 | **Pro**       | R$ 29,90  | R$ 299,00   |
-| **Enterprise**| R$ 99,90  | R$ 999,00   |
+| **Premium**   | R$ 99,90  | R$ 999,00   |
 
 ---
 
@@ -86,13 +86,13 @@ Anual:   price_1NXZxyzdefABCDEF
 
 ---
 
-### 5. Repita para o Product "Plano Enterprise"
+### 5. Repita para o Product "Plano Premium"
 
 1. Vá em **Products** → **+ Add product**
 
 2. Preencha:
-   - **Name**: `AppFinanceiro Enterprise`
-   - **Description**: `Plano Enterprise para empresas e gestão avançada`
+   - **Name**: `AppFinanceiro Premium`
+   - **Description**: `Plano Premium para empresas e gestão avançada`
    - **Statement descriptor**: `APPFIN ENT`
 
 3. Adicione os preços:
@@ -167,7 +167,7 @@ export const getPriceId = (planId: string, interval: 'month' | 'year'): string |
       ? env.STRIPE_PRICE_PRO_MONTHLY 
       : env.STRIPE_PRICE_PRO_YEARLY;
   }
-  if (planId === 'enterprise') {
+   if (planId === 'enterprise') { // ID interno do plano Premium
     return interval === 'month' 
       ? env.STRIPE_PRICE_ENTERPRISE_MONTHLY 
       : env.STRIPE_PRICE_ENTERPRISE_YEARLY;

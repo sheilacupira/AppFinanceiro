@@ -169,7 +169,9 @@ const parseDate = (raw: string): string | null => {
   const trimmed = raw.trim();
 
   if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
-    const date = new Date(trimmed);
+    // Parse as local midnight to avoid UTC off-by-one-day in negative-offset timezones
+    const isoDay = trimmed.substring(0, 10);
+    const date = new Date(isoDay + 'T00:00:00');
     return Number.isNaN(date.getTime()) ? null : date.toISOString();
   }
 

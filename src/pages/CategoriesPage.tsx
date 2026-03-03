@@ -3,6 +3,7 @@ import { Plus, Pencil, Trash2, Tag } from 'lucide-react';
 import { useFinance } from '@/contexts/FinanceContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Category, TransactionType } from '@/types/finance';
+import { generateId } from '@/lib/finance';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -160,7 +161,7 @@ function CategoryForm({ category, onSave, onClose }: CategoryFormProps) {
     if (!name.trim()) return;
 
     onSave({
-      id: category?.id || `cat-${Date.now()}`,
+      id: category?.id || generateId(),
       name: name.trim(),
       type,
       icon,

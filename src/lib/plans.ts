@@ -1,6 +1,6 @@
 /**
  * Planos de Assinatura
- * Definição dos planos Free, Pro e Enterprise
+ * Definição dos planos Grátis, Pró e Premium
  */
 
 import type { Plan } from '@/types/billing';
@@ -8,13 +8,14 @@ import type { Plan } from '@/types/billing';
 export const PLANS: Record<string, Plan> = {
   free: {
     id: 'free',
-    name: 'Free',
+    name: 'Grátis',
     description: 'Para uso pessoal básico',
     price: {
       monthly: 0,
       yearly: 0,
     },
     features: [
+      'Sem PJ (somente PF)',
       'Até 100 transações/mês',
       '9 categorias padrão',
       'Até 5 lançamentos recorrentes',
@@ -34,7 +35,7 @@ export const PLANS: Record<string, Plan> = {
   
   pro: {
     id: 'pro',
-    name: 'Pro',
+    name: 'Pró',
     description: 'Para profissionais e pequenas empresas',
     price: {
       monthly: 29.90,
@@ -45,6 +46,7 @@ export const PLANS: Record<string, Plan> = {
       yearly: 'price_pro_yearly',
     },
     features: [
+      'Perfil PJ (Pessoa Jurídica)',
       'Transações ilimitadas',
       'Categorias customizadas ilimitadas',
       'Lançamentos recorrentes ilimitados',
@@ -68,7 +70,7 @@ export const PLANS: Record<string, Plan> = {
   
   enterprise: {
     id: 'enterprise',
-    name: 'Enterprise',
+    name: 'Premium',
     description: 'Para empresas e gestão avançada',
     price: {
       monthly: 99.90,
@@ -79,6 +81,7 @@ export const PLANS: Record<string, Plan> = {
       yearly: 'price_enterprise_yearly',
     },
     features: [
+      'Perfil PJ (Pessoa Jurídica)',
       'Tudo do plano Pro',
       'Contas bancárias ilimitadas (Open Finance)',
       'Múltiplos usuários/organizações',

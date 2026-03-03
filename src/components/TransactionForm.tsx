@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { X, Trash2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Transaction, TransactionType, TransactionStatus, Category } from '@/types/finance';
@@ -63,8 +63,9 @@ export function TransactionForm({
   const [isRecurring, setIsRecurring] = useState(transaction?.isRecurring || false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const filteredCategories = categories.filter(
-    c => c.type === type || c.type === 'both'
+  const filteredCategories = useMemo(
+    () => categories.filter(c => c.type === type || c.type === 'both'),
+    [categories, type]
   );
 
   useEffect(() => {
@@ -114,7 +115,7 @@ export function TransactionForm({
       id: transaction?.id || generateId(),
       type,
       amount,
-      date: new Date(date).toISOString(),
+      date: new Date(date + 'T00:00:00').toISOString(),
       description,
       categoryId,
       source: source || undefined,

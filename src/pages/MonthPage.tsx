@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { parseLocalDate } from '@/lib/finance';
 import { useFinance } from '@/contexts/FinanceContext';
 import { useToast } from '@/components/ui/use-toast';
 import { MonthNavigator } from '@/components/MonthNavigator';
@@ -34,7 +35,7 @@ export function MonthPage() {
   const allTransactions = useMemo(
     () =>
       data.transactions.filter(t => {
-        const date = new Date(t.date);
+        const date = parseLocalDate(t.date);
         return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
       }),
     [data.transactions, currentMonth, currentYear]
@@ -157,7 +158,7 @@ export function MonthPage() {
 
       {/* Chart */}
       <ExpenseCategoryChart 
-        transactions={allTransactions}
+        transactions={expenseTransactions}
         categories={data.categories}
       />
 

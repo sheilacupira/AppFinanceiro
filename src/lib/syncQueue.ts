@@ -10,6 +10,9 @@ import {
   deleteRemoteTransaction,
   upsertRemoteTransaction,
 } from '@/lib/transactionSync';
+import { apiRequest } from '@/lib/apiClient';
+
+const MAX_RETRY_ATTEMPTS = 5;
 
 type SyncOperationType =
   | 'transaction.upsert'
@@ -18,7 +21,8 @@ type SyncOperationType =
   | 'recurrence.delete'
   | 'category.upsert'
   | 'category.delete'
-  | 'settings.upsert';
+  | 'settings.upsert'
+  | 'importBatch.delete';
 
 type SyncOperationPayloadMap = {
   'transaction.upsert': { transaction: Transaction };
@@ -28,6 +32,7 @@ type SyncOperationPayloadMap = {
   'category.upsert': { category: Category };
   'category.delete': { categoryId: string };
   'settings.upsert': { settings: Settings };
+  'importBatch.delete': { batchId: string };
 };
 
 export interface SyncQueueItem<T extends SyncOperationType = SyncOperationType> {
@@ -102,6 +107,12 @@ const executeItem = async (token: string, item: SyncQueueItem): Promise<void> =>
     case 'settings.upsert':
       await upsertRemoteSettings(token, item.payload.settings);
       break;
+    case 'importBatch.delete':
+      await apiRequest(`/api/transactions/batch/${item.payload.batchId}`, {
+        method: 'DELETE',
+        token,
+      });
+      break;
   }
 };
 
@@ -144,7 +155,10 @@ export async function processSyncQueue(token: string): Promise<{ processed: numb
       await executeItem(token, item);
       processed += 1;
     } catch {
-      remaining.push({ ...item, attempts: item.attempts + 1 });
+      if (item.attempts + 1 < MAX_RETRY_ATTEMPTS) {
+        remaining.push({ ...item, attempts: item.attempts + 1 });
+      }
+      // Discard items that have exceeded max retries (permanent failure)
     }
   }
 

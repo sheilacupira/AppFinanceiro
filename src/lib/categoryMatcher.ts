@@ -87,7 +87,7 @@ const CATEGORY_DB: CategoryDefinition[] = [
     merchants: ['renner', 'riachuelo', 'forum', 'zara', 'hm', 'adidas', 'nike', 'amazon', 'mercado livre', 'shopee', 'shein', 'aliexpress'],
   },
   {
-    id: 'bills',
+    id: 'credit-card',
     name: 'Cartão',
     keywords: ['cartao', 'cartão', 'fatura', 'juros', 'taxa', 'anuidade', 'pagamento cartao', 'visa', 'mastercard'],
     merchants: [],

@@ -209,7 +209,7 @@ class OpenFinanceService {
       id: `pluggy-${pluggyTx.id}`,
       type: pluggyTx.type === 'CREDIT' ? 'income' : 'expense',
       amount: Math.abs(pluggyTx.amount),
-      date: date.toISOString().split('T')[0], // Format: YYYY-MM-DD
+      date: new Date(date.getFullYear(), date.getMonth(), date.getDate()).toISOString(), // Local midnight ISO
       description: pluggyTx.description || pluggyTx.descriptionRaw || 'Transação',
       categoryId: 'other-expense', // Será categorizado automaticamente
       source: `Open Finance - ${accountName}`,

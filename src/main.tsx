@@ -2,6 +2,19 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
+// Apply saved theme before first paint to avoid flash
+try {
+  const raw = localStorage.getItem('financeiro_data');
+  if (raw) {
+    const parsed = JSON.parse(raw) as { settings?: { theme?: string } };
+    if (parsed?.settings?.theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    }
+  }
+} catch {
+  // Ignore parse errors — theme will fall back to light
+}
+
 // Register PWA Service Worker
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {

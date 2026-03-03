@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { exportData, importData } from '@/lib/storage';
+import { useFinance } from '@/contexts/FinanceContext';
 import { Download, Upload, Share2 } from 'lucide-react';
 
 export function BackupManager() {
@@ -11,6 +12,7 @@ export function BackupManager() {
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { refreshData } = useFinance();
 
   const handleExportDownload = () => {
     setIsExporting(true);
@@ -103,8 +105,8 @@ export function BackupManager() {
           description: 'Seus dados foram restaurados com sucesso!',
         });
         
-        // Reload page para mostrar novos dados
-        setTimeout(() => window.location.reload(), 1000);
+        // Refresh in-memory data without a full page reload
+        refreshData();
       } catch (error) {
         toast({
           title: 'Erro ao restaurar',
@@ -181,7 +183,6 @@ export function BackupManager() {
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
-                  onClick={triggerFileInput}
                   disabled={isImporting}
                   className="w-full gap-2"
                   variant="outline"

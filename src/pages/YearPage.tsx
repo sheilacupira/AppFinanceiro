@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useFinance } from '@/contexts/FinanceContext';
-import { getMonthNameShort, formatCurrency } from '@/lib/finance';
+import { getMonthNameShort, formatCurrency, parseLocalDate } from '@/lib/finance';
 import { cn } from '@/lib/utils';
 import {
   BarChart,
@@ -20,7 +20,7 @@ export function YearPage() {
   const summaries = useMemo(() => {
     return Array.from({ length: 12 }, (_, month) => {
       const monthTransactions = data.transactions.filter(t => {
-        const date = new Date(t.date);
+        const date = parseLocalDate(t.date);
         return date.getFullYear() === year && date.getMonth() === month;
       });
 

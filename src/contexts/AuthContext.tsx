@@ -20,6 +20,7 @@ type AuthTenant = {
   id: string;
   name: string;
   profileType?: 'personal' | 'business';
+  billingPlan?: 'free' | 'pro' | 'enterprise';
 };
 
 type AuthSession = {
@@ -120,16 +121,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Desabilitado: sempre pedir login ao abrir
-    // const tokens = loadSaasTokens();
-    // if (!tokens) {
-    //   setStatus('anonymous');
-    //   return;
-    // }
-    // void resolveSessionFromTokens(tokens);
-    
-    // Sempre começar no estado anonymous para forçar login
-    setStatus('anonymous');
+    const tokens = loadSaasTokens();
+    if (!tokens) {
+      setStatus('anonymous');
+      return;
+    }
+    void resolveSessionFromTokens(tokens);
   }, [resolveSessionFromTokens]);
 
   const login = useCallback(async (payload: { email: string; password: string }) => {
@@ -173,15 +170,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           body: JSON.stringify({ refreshToken: tokens.refreshToken }),
         });
       }
+    } catch {
+      // Ignore logout API errors — always clear local session
     } finally {
       clearSaasTokens();
       setSession(null);
       setStatus(isSaasMode ? 'anonymous' : 'authenticated');
-      
-      // Recarregar a página para garantir estado limpo
-      if (isSaasMode) {
-        window.location.reload();
-      }
     }
   }, []);
 

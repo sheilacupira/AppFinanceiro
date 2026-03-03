@@ -59,9 +59,6 @@ export function BillingManager({ userId }: BillingManagerProps) {
   const handleCancelSubscription = async () => {
     if (!subscription) return;
 
-    const confirmed = confirm('Tem certeza que deseja cancelar sua assinatura?');
-    if (!confirmed) return;
-
     setActionLoading(true);
     try {
       const success = await billingService.cancelSubscription(subscription.id);
@@ -69,7 +66,7 @@ export function BillingManager({ userId }: BillingManagerProps) {
         await loadBillingData();
       }
     } catch (err) {
-      alert('Erro ao cancelar assinatura');
+      setError('Erro ao cancelar assinatura');
     } finally {
       setActionLoading(false);
     }
@@ -83,7 +80,7 @@ export function BillingManager({ userId }: BillingManagerProps) {
         window.location.href = result.url;
       }
     } catch (err) {
-      alert('Erro ao abrir painel de gerenciamento');
+      setError('Erro ao abrir painel de gerenciamento');
       console.error(err);
     }
   };
@@ -98,13 +95,13 @@ export function BillingManager({ userId }: BillingManagerProps) {
         await loadBillingData();
       }
     } catch (err) {
-      alert('Erro ao reativar assinatura');
+      setError('Erro ao reativar assinatura');
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handlePlanChanged = async (planId: PlanId) => {
+  const handlePlanChanged = async (_planId: PlanId) => {
     setShowPlans(false);
     await loadBillingData();
   };
@@ -121,6 +118,8 @@ export function BillingManager({ userId }: BillingManagerProps) {
   };
 
   const currentPlan = subscription ? getPlan(subscription.planId) : getPlan('free');
+  const currentPlanBadgeLabel =
+    currentPlan.id === 'free' ? 'Grátis' : currentPlan.id === 'pro' ? 'Pró' : 'Premium';
 
   if (loading) {
     return (
@@ -171,7 +170,7 @@ export function BillingManager({ userId }: BillingManagerProps) {
               <CardTitle className="flex items-center gap-2">
                 Plano Atual: {currentPlan.name}
                 <Badge variant={currentPlan.id === 'free' ? 'secondary' : 'default'}>
-                  {currentPlan.id.toUpperCase()}
+                  {currentPlanBadgeLabel}
                 </Badge>
               </CardTitle>
               <CardDescription>{currentPlan.description}</CardDescription>

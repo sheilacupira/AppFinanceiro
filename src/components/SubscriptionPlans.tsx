@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import { billingService } from '@/lib/billingService';
 import { getAllPlans } from '@/lib/plans';
+import { toast } from 'sonner';
 import type { PlanId, BillingInterval } from '@/types/billing';
 
 interface SubscriptionPlansProps {
@@ -27,6 +28,23 @@ export function SubscriptionPlans({
   const [interval, setInterval] = useState<BillingInterval>('month');
 
   const plans = getAllPlans();
+
+  const applyLocalMockUpgrade = (planId: PlanId) => {
+    const mockSubscription = {
+      id: `sub_${Date.now()}`,
+      userId,
+      planId,
+      status: 'active',
+      currentPeriodStart: new Date(),
+      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      cancelAtPeriodEnd: false,
+      stripeSubscriptionId: undefined,
+      stripeCustomerId: undefined,
+    };
+
+    localStorage.setItem(`mock_subscription_${userId}`, JSON.stringify(mockSubscription));
+    onPlanChanged?.(planId);
+  };
 
   const handleSelectPlan = async (planId: PlanId) => {
     if (planId === 'free') return;
@@ -47,24 +65,22 @@ export function SubscriptionPlans({
       if (result.url.startsWith('http')) {
         window.location.href = result.url;
       } else {
-        // Modo mock: simular upgrade local
-        const mockSubscription = {
-          id: `sub_${Date.now()}`,
-          userId,
-          planId,
-          status: 'active',
-          currentPeriodStart: new Date(),
-          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          cancelAtPeriodEnd: false,
-          stripeSubscriptionId: undefined,
-          stripeCustomerId: undefined,
-        };
-        localStorage.setItem(`mock_subscription_${userId}`, JSON.stringify(mockSubscription));
-        onPlanChanged?.(planId);
+        applyLocalMockUpgrade(planId);
       }
     } catch (error) {
       console.error('Erro ao selecionar plano:', error);
-      alert('Erro ao processar assinatura. Tente novamente.');
+
+      const message = error instanceof Error ? error.message : 'Erro ao processar assinatura.';
+      const shouldFallbackToMock =
+        import.meta.env.DEV &&
+        (message.includes('Stripe is not configured') || message.includes('Stripe price not configured'));
+
+      if (shouldFallbackToMock) {
+        applyLocalMockUpgrade(planId);
+        toast.success('Stripe não configurado no ambiente local. Upgrade simulado para testes.');
+      } else {
+        toast.error(message || 'Erro ao processar assinatura. Tente novamente.');
+      }
     } finally {
       setLoading(null);
     }

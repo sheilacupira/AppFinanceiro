@@ -81,6 +81,7 @@ meRouter.get('/me', requireAuth, async (req, res) => {
       id: membership.tenant.id,
       name: toDisplayName(membership.tenant.name),
       profileType: toProfileType(membership.tenant.name),
+      billingPlan: membership.tenant.billingPlan,
       createdAt: membership.tenant.createdAt,
     },
     role: membership.role,
@@ -112,6 +113,7 @@ meRouter.get('/me/memberships', requireAuth, async (req, res) => {
         id: membership.tenant.id,
         name: toDisplayName(membership.tenant.name),
         profileType: toProfileType(membership.tenant.name),
+        billingPlan: membership.tenant.billingPlan,
       },
       role: membership.role,
       isCurrent: membership.tenantId === auth.tenantId,
@@ -182,6 +184,7 @@ meRouter.post('/me/switch-tenant', requireAuth, async (req, res) => {
       id: targetMembership.tenant.id,
       name: toDisplayName(targetMembership.tenant.name),
       profileType: toProfileType(targetMembership.tenant.name),
+      billingPlan: targetMembership.tenant.billingPlan,
     },
     role: targetMembership.role,
     accessToken,
@@ -200,6 +203,23 @@ meRouter.post('/me/tenants', requireAuth, async (req, res) => {
   if (!parsed.success) {
     res.status(400).json({ error: 'Invalid payload', details: parsed.error.flatten() });
     return;
+  }
+
+  if (parsed.data.profileType === 'business') {
+    const currentTenant = await prisma.tenant.findUnique({
+      where: { id: auth.tenantId },
+      select: { billingPlan: true },
+    });
+
+    if (!currentTenant) {
+      res.status(404).json({ error: 'Current tenant not found' });
+      return;
+    }
+
+    if (currentTenant.billingPlan === 'free') {
+      res.status(403).json({ error: 'Perfil PJ disponível apenas para planos pagos' });
+      return;
+    }
   }
 
   const existingUser = await prisma.user.findUnique({
@@ -261,6 +281,7 @@ meRouter.post('/me/tenants', requireAuth, async (req, res) => {
       id: created.tenant.id,
       name: toDisplayName(created.tenant.name),
       profileType: toProfileType(created.tenant.name),
+      billingPlan: created.tenant.billingPlan,
     },
     role: created.membership.role,
     accessToken: created.accessToken,

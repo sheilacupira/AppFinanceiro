@@ -173,7 +173,7 @@ Menu lateral → Products → [+ Add product]
 ```
 
 **Repetir processo para:**
-- AppFinanceiro Enterprise (R$ 99,90/mês e R$ 999,00/ano)
+- AppFinanceiro Premium (R$ 99,90/mês e R$ 999,00/ano)
 
 ---
 
@@ -357,8 +357,8 @@ Server running on http://localhost:4000
 | `STRIPE_WEBHOOK_SECRET` | `whsec_...` | Developers → Webhooks → (endpoint) |
 | `STRIPE_PRICE_PRO_MONTHLY` | `price_1...` | Products → AppFinanceiro Pro → Preço mensal |
 | `STRIPE_PRICE_PRO_YEARLY` | `price_1...` | Products → AppFinanceiro Pro → Preço anual |
-| `STRIPE_PRICE_ENTERPRISE_MONTHLY` | `price_1...` | Products → AppFinanceiro Enterprise → Preço mensal |
-| `STRIPE_PRICE_ENTERPRISE_YEARLY` | `price_1...` | Products → AppFinanceiro Enterprise → Preço anual |
+| `STRIPE_PRICE_ENTERPRISE_MONTHLY` | `price_1...` | Products → AppFinanceiro Premium → Preço mensal |
+| `STRIPE_PRICE_ENTERPRISE_YEARLY` | `price_1...` | Products → AppFinanceiro Premium → Preço anual |
 
 ---
 

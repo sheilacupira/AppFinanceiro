@@ -28,3 +28,9 @@ dist-ssr
 
 # Backend local secrets
 server/.env
+
+# Backend database (local only)
+server/prisma/dev.db
+server/prisma/dev.db-journal
+server/prisma/dev.db-shm
+server/prisma/dev.db-wal

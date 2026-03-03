@@ -7,7 +7,6 @@ let currentTenantId: string | undefined = undefined;
 
 export function setCurrentTenantId(tenantId: string | undefined): void {
   currentTenantId = tenantId;
-  console.log(`[storage] Current tenant set to: ${tenantId}`);
 }
 
 export function getCurrentTenantId(): string | undefined {
@@ -16,7 +15,6 @@ export function getCurrentTenantId(): string | undefined {
 
 function getStorageKey(): string {
   if (!currentTenantId) {
-    console.warn('[storage] ⚠️  No tenantId set, using default key');
     return STORAGE_KEY_PREFIX;
   }
   return `${STORAGE_KEY_PREFIX}:${currentTenantId}`;
@@ -185,7 +183,8 @@ export function updateCategory(category: Category): void {
 
 export function deleteCategory(id: string): boolean {
   const data = loadData();
-  const isInUse = data.transactions.some(t => t.categoryId === id);
+  const isInUse = data.transactions.some(t => t.categoryId === id)
+    || data.recurrences.some(r => r.categoryId === id);
   if (isInUse) {
     return false;
   }

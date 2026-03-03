@@ -25,7 +25,7 @@ export const generateTransactionHash = (transaction: {
   // Gerar hash (djb2 algorithm)
   let hash = 5381;
   for (let i = 0; i < base.length; i += 1) {
-    hash = (hash * 33) ^ base.charCodeAt(i);
+    hash = (((hash << 5) + hash) ^ base.charCodeAt(i)) >>> 0;
   }
   
   return Math.abs(hash).toString(36);

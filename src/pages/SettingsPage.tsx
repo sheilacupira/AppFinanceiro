@@ -16,11 +16,29 @@ export function SettingsPage() {
   const { data, updateSettings } = useFinance();
   const { session, logout, listProfiles, switchProfile, createProfile } = useAuth();
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
-  const [profiles, setProfiles] = useState<Array<{ tenant: { id: string; name: string; profileType?: 'personal' | 'business' }; role: 'OWNER' | 'ADMIN' | 'MEMBER'; isCurrent: boolean }>>([]);
+
+  // Apply saved theme on mount
+  useEffect(() => {
+    const savedTheme = data.settings.theme;
+    if (savedTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+      setIsDark(true);
+    } else if (savedTheme === 'light') {
+      document.documentElement.classList.remove('dark');
+      setIsDark(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const [profiles, setProfiles] = useState<Array<{ tenant: { id: string; name: string; profileType?: 'personal' | 'business'; billingPlan?: 'free' | 'pro' | 'enterprise' }; role: 'OWNER' | 'ADMIN' | 'MEMBER'; isCurrent: boolean }>>([]);
   const [newProfileName, setNewProfileName] = useState('');
   const [newProfileType, setNewProfileType] = useState<'personal' | 'business'>('personal');
   const [switchingProfile, setSwitchingProfile] = useState(false);
   const [creatingProfile, setCreatingProfile] = useState(false);
+  const currentProfile = profiles.find((profile) => profile.isCurrent);
+  const activeBillingPlan = session?.tenant.billingPlan ?? currentProfile?.tenant.billingPlan ?? 'free';
+  const canCreateBusinessProfile = activeBillingPlan !== 'free';
+  const activeBillingPlanLabel =
+    activeBillingPlan === 'free' ? 'Grátis' : activeBillingPlan === 'pro' ? 'Pró' : 'Premium';
 
   useEffect(() => {
     const loadProfiles = async () => {
@@ -51,6 +69,11 @@ export function SettingsPage() {
   };
 
   const handleCreateProfile = async () => {
+    if (newProfileType === 'business' && !canCreateBusinessProfile) {
+      toast.error('Perfil PJ disponível apenas para planos pagos.');
+      return;
+    }
+
     setCreatingProfile(true);
     try {
       const fallbackName = newProfileType === 'personal'
@@ -197,6 +220,7 @@ export function SettingsPage() {
                     type="button"
                     variant={newProfileType === 'business' ? 'default' : 'outline'}
                     size="sm"
+                    disabled={!canCreateBusinessProfile}
                     onClick={() => {
                       setNewProfileType('business');
                       if (!newProfileName.trim()) {
@@ -207,6 +231,11 @@ export function SettingsPage() {
                     Pessoa Jurídica
                   </Button>
                 </div>
+                {!canCreateBusinessProfile && (
+                  <p className="text-xs text-muted-foreground">
+                    Perfil PJ disponível apenas em planos pagos.
+                  </p>
+                )}
                 <Button className="w-full" size="sm" disabled={creatingProfile} onClick={() => void handleCreateProfile()}>
                   {creatingProfile ? 'Criando...' : 'Criar e entrar'}
                 </Button>
@@ -240,6 +269,7 @@ export function SettingsPage() {
             <p className="font-medium">Conta SaaS</p>
             <p className="text-sm text-muted-foreground">{session.user.email}</p>
             <p className="text-xs text-muted-foreground">Organização: {session.tenant.name}</p>
+            <p className="text-xs text-muted-foreground">Plano: {activeBillingPlanLabel}</p>
           </div>
 
           <Button variant="outline" className="w-full" onClick={() => void logout()}>
