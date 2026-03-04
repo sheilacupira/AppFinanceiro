@@ -57,8 +57,8 @@ export function SubscriptionPlans({
         planId,
         interval,
         userId,
-        `${window.location.origin}/settings?billing=success`,
-        `${window.location.origin}/settings?billing=cancel`,
+        `${window.location.origin}/?billing=success`,
+        `${window.location.origin}/?billing=cancel`,
       );
 
       // Em produção, redirecionar para Stripe Checkout

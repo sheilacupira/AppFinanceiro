@@ -42,8 +42,8 @@ export const PLANS: Record<string, Plan> = {
       yearly: 299.00, // ~R$ 25/mês
     },
     stripePriceIds: {
-      monthly: 'price_pro_monthly', // Substituir por IDs reais do Stripe
-      yearly: 'price_pro_yearly',
+      monthly: 'price_1T37VmKH4dVnWiIcCNCRh3R7',
+      yearly: 'price_1T37VmKH4dVnWiIcAFkCHBXf',
     },
     features: [
       'Perfil PJ (Pessoa Jurídica)',
@@ -77,8 +77,8 @@ export const PLANS: Record<string, Plan> = {
       yearly: 999.00, // ~R$ 83/mês
     },
     stripePriceIds: {
-      monthly: 'price_enterprise_monthly',
-      yearly: 'price_enterprise_yearly',
+      monthly: 'price_enterprise_monthly', // TODO: criar no Stripe Dashboard e substituir
+      yearly: 'price_enterprise_yearly',   // TODO: criar no Stripe Dashboard e substituir
     },
     features: [
       'Perfil PJ (Pessoa Jurídica)',

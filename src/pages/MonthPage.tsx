@@ -11,6 +11,7 @@ import { TransactionForm } from '@/components/TransactionForm';
 import { FloatingAddButton } from '@/components/FloatingAddButton';
 import { DateRangeFilter } from '@/components/DateRangeFilter';
 import { ExpenseCategoryChart } from '@/components/ExpenseCategoryChart';
+import { PlanUsageBanner } from '@/components/PlanUsageBanner';
 import { Transaction } from '@/types/finance';
 
 export function MonthPage() {
@@ -155,6 +156,9 @@ export function MonthPage() {
         totalExpense={summary.totalExpense}
         balance={summary.balance}
       />
+
+      {/* Plan usage (Free plan only) */}
+      <PlanUsageBanner />
 
       {/* Chart */}
       <ExpenseCategoryChart 

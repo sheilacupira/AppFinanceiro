@@ -30,6 +30,8 @@ import {
 import { enqueueSyncOperation, processSyncQueue } from '@/lib/syncQueue';
 import { apiRequest } from '@/lib/apiClient';
 import { deleteRemoteTransaction, syncTransactions, upsertRemoteTransaction } from '@/lib/transactionSync';
+import { checkLimit } from '@/lib/plans';
+import { toast } from 'sonner';
 
 interface FinanceContextType {
   data: AppData;
@@ -257,6 +259,22 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, [currentMonth]);
 
   const handleAddTransaction = useCallback((transaction: Transaction) => {
+    // Enforce plan limits
+    const plan = session?.tenant.billingPlan ?? 'free';
+    const txDate = new Date(transaction.date);
+    const monthCount = data.transactions.filter(t => {
+      const d = new Date(t.date);
+      return d.getMonth() === txDate.getMonth() && d.getFullYear() === txDate.getFullYear();
+    }).length;
+    const txLimit = checkLimit(plan, 'transactions', monthCount);
+    if (!txLimit.allowed) {
+      toast.error(
+        `Limite de ${txLimit.limit} transações/mês atingido. Faça upgrade do plano para continuar.`,
+        { action: { label: 'Ver planos', onClick: () => { window.location.hash = '#billing'; } } }
+      );
+      return;
+    }
+
     addTx(transaction);
     if (isSaasMode && status === 'authenticated') {
       const accessToken = getAccessToken();
@@ -274,7 +292,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       createOrUpdateTithe(txDate.getMonth(), txDate.getFullYear());
     }
     refreshData();
-  }, [data.settings.isTither, getAccessToken, refreshData, status]);
+  }, [data.transactions, data.settings.isTither, getAccessToken, refreshData, session, status]);
 
   const handleUpdateTransaction = useCallback((transaction: Transaction) => {
     updateTx(transaction);
@@ -342,6 +360,17 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, [data, getAccessToken, refreshData, status]);
 
   const handleAddRecurrence = useCallback((recurrence: Recurrence) => {
+    // Enforce plan limits
+    const plan = session?.tenant.billingPlan ?? 'free';
+    const recLimit = checkLimit(plan, 'recurrences', data.recurrences.length);
+    if (!recLimit.allowed) {
+      toast.error(
+        `Limite de ${recLimit.limit} lançamentos recorrentes atingido. Faça upgrade do plano.`,
+        { action: { label: 'Ver planos', onClick: () => { window.location.hash = '#billing'; } } }
+      );
+      return;
+    }
+
     addRec(recurrence);
     if (isSaasMode && status === 'authenticated') {
       const accessToken = getAccessToken();
@@ -355,7 +384,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       }
     }
     refreshData();
-  }, [getAccessToken, refreshData, status]);
+  }, [data.recurrences, getAccessToken, refreshData, session, status]);
 
   const handleUpdateRecurrence = useCallback((recurrence: Recurrence) => {
     updateRec(recurrence);
@@ -390,6 +419,17 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, [getAccessToken, refreshData, status]);
 
   const handleAddCategory = useCallback((category: Category) => {
+    // Enforce plan limits
+    const plan = session?.tenant.billingPlan ?? 'free';
+    const catLimit = checkLimit(plan, 'categories', data.categories.length);
+    if (!catLimit.allowed) {
+      toast.error(
+        `Limite de ${catLimit.limit} categorias atingido no plano gratuito. Faça upgrade para categorias ilimitadas.`,
+        { action: { label: 'Ver planos', onClick: () => { window.location.hash = '#billing'; } } }
+      );
+      return;
+    }
+
     addCat(category);
     if (isSaasMode && status === 'authenticated') {
       const accessToken = getAccessToken();
@@ -403,7 +443,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       }
     }
     refreshData();
-  }, [getAccessToken, refreshData, status]);
+  }, [data.categories, getAccessToken, refreshData, session, status]);
 
   const handleUpdateCategory = useCallback((category: Category) => {
     updateCat(category);
