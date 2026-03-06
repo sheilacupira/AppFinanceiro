@@ -52,7 +52,7 @@ interface AuthContextType {
   status: AuthStatus;
   session: AuthSession | null;
   login: (payload: { email: string; password: string }) => Promise<void>;
-  register: (payload: { email: string; fullName: string; password: string; tenantName: string }) => Promise<void>;
+  register: (payload: { email: string; phone?: string; fullName: string; password: string; tenantName: string }) => Promise<void>;
   logout: () => Promise<void>;
   listProfiles: () => Promise<Array<{ tenant: AuthTenant; role: 'OWNER' | 'ADMIN' | 'MEMBER'; isCurrent: boolean }>>;
   switchProfile: (tenantId: string) => Promise<void>;
@@ -65,6 +65,8 @@ interface AuthContextType {
   updateMemberRole: (userId: string, role: 'ADMIN' | 'MEMBER') => Promise<void>;
   removeMember: (userId: string) => Promise<void>;
   acceptInvite: (token: string) => Promise<{ tenantId: string; tenantName: string }>;
+  forgotPassword: (phone: string) => Promise<void>;
+  resetPassword: (token: string, password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -171,7 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [applySession]);
 
   const register = useCallback(
-    async (payload: { email: string; fullName: string; password: string; tenantName: string }) => {
+    async (payload: { email: string; phone?: string; fullName: string; password: string; tenantName: string }) => {
       const response = await apiRequest<AuthResponse>('/api/auth/register', {
         method: 'POST',
         body: JSON.stringify(payload),
@@ -332,6 +334,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { tenantId: res.tenantId, tenantName: res.tenantName };
   }, []);
 
+  const forgotPassword = useCallback(async (phone: string) => {
+    await apiRequest<{ message: string }>('/api/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ phone }),
+    });
+  }, []);
+
+  const resetPassword = useCallback(async (token: string, password: string) => {
+    await apiRequest<{ message: string }>('/api/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, password }),
+    });
+  }, []);
+
   const value = useMemo(
     () => ({
       status,
@@ -350,9 +366,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       updateMemberRole,
       removeMember,
       acceptInvite,
+      forgotPassword,
+      resetPassword,
     }),
     [status, session, login, register, logout, listProfiles, switchProfile, createProfile, updateTenant,
-     listMembers, inviteCollaborator, listPendingInvites, cancelInvite, updateMemberRole, removeMember, acceptInvite]
+     listMembers, inviteCollaborator, listPendingInvites, cancelInvite, updateMemberRole, removeMember, acceptInvite,
+     forgotPassword, resetPassword]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

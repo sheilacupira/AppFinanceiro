@@ -10,11 +10,13 @@ import {
   verifyRefreshToken,
 } from '../lib/jwt.js';
 import { env } from '../config/env.js';
+import { sendWhatsApp, buildPasswordResetWhatsApp } from '../lib/whatsapp.js';
 
 export const authRouter = Router();
 
 const registerSchema = z.object({
   email: z.string().email(),
+  phone: z.string().optional(),
   fullName: z.string().min(2),
   password: z.string().min(8),
   tenantName: z.string().min(2),
@@ -43,7 +45,8 @@ authRouter.post('/register', async (req, res) => {
   }
 
   const email = parsed.data.email.trim().toLowerCase();
-  const { fullName, password, tenantName } = parsed.data;
+  const { fullName, password, tenantName, phone } = parsed.data;
+  const normalizedPhone = phone ? phone.replace(/\D/g, '') : undefined;
   const existingUser = await prisma.user.findUnique({ where: { email } });
 
   if (existingUser) {
@@ -55,7 +58,7 @@ authRouter.post('/register', async (req, res) => {
 
   const result = await prisma.$transaction(async (tx) => {
     const user = await tx.user.create({
-      data: { email, fullName, passwordHash },
+      data: { email, fullName, passwordHash, phone: normalizedPhone ?? null },
     });
 
     const tenant = await tx.tenant.create({
@@ -281,3 +284,91 @@ authRouter.post('/logout', async (req, res) => {
     res.status(204).send();
   }
 });
+
+// ─── Recuperação de senha ─────────────────────────────────────────────────────
+
+const forgotPasswordSchema = z.object({
+  phone: z.string().min(10),
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(8),
+});
+
+authRouter.post('/forgot-password', async (req, res) => {
+  const parsed = forgotPasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Invalid payload' });
+    return;
+  }
+
+  const phone = parsed.data.phone.replace(/\D/g, '');
+  const phoneWithCountry = phone.length === 10 || phone.length === 11 ? `55${phone}` : phone;
+
+  // Sempre retorna 200 para não expor se o número existe
+  const user = await prisma.user.findFirst({ where: { phone: { in: [phone, phoneWithCountry] } } });
+
+  if (user) {
+    // Invalida tokens anteriores não utilizados
+    await prisma.passwordResetToken.updateMany({
+      where: { userId: user.id, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
+
+    const resetToken = await prisma.passwordResetToken.create({
+      data: { userId: user.id, expiresAt },
+    });
+
+    const resetUrl = `${env.APP_URL}/reset-password/${resetToken.token}`;
+    const message = buildPasswordResetWhatsApp(resetUrl, user.fullName);
+
+    await sendWhatsApp(phoneWithCountry, message);
+  }
+
+  res.json({ message: 'Se este número estiver cadastrado, você receberá o link no WhatsApp em breve.' });
+});
+
+authRouter.post('/reset-password', async (req, res) => {
+  const parsed = resetPasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Invalid payload', details: parsed.error.flatten() });
+    return;
+  }
+
+  const { token, password } = parsed.data;
+
+  const resetToken = await prisma.passwordResetToken.findUnique({
+    where: { token },
+    include: { user: true },
+  });
+
+  if (!resetToken || resetToken.usedAt || resetToken.expiresAt < new Date()) {
+    res.status(400).json({ error: 'Token inválido ou expirado.' });
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: resetToken.userId },
+      data: { passwordHash },
+    }),
+    // Marca o token como usado
+    prisma.passwordResetToken.update({
+      where: { id: resetToken.id },
+      data: { usedAt: new Date() },
+    }),
+    // Revoga todos os refresh tokens ativos (força novo login)
+    prisma.refreshToken.updateMany({
+      where: { userId: resetToken.userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    }),
+  ]);
+
+  res.json({ message: 'Senha redefinida com sucesso. Faça login com a nova senha.' });
+});
+

@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 type Mode = 'login' | 'register' | 'forgot';
 
 export function AuthPage() {
-  const { login, register } = useAuth();
+  const { login, register, forgotPassword } = useAuth();
   const [mode, setMode] = useState<Mode>('login');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -20,6 +20,7 @@ export function AuthPage() {
     fullName: '',
     tenantName: '',
     email: '',
+    phone: '',
     password: '',
     confirmPassword: '',
   });
@@ -32,6 +33,7 @@ export function AuthPage() {
   };
 
   const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const isValidPhone = (phone: string) => /^\+?[0-9]{10,15}$/.test(phone.replace(/[\s\-().]/g, ''));
 
   const validate = (): boolean => {
     const next: Partial<typeof form> = {};
@@ -40,6 +42,7 @@ export function AuthPage() {
     if (mode === 'register') {
       if (form.fullName.trim().length < 2) next.fullName = 'Informe seu nome completo';
       if (form.tenantName.trim().length < 2) next.tenantName = 'Informe um nome para a conta';
+      if (!isValidPhone(form.phone)) next.phone = 'WhatsApp inválido (ex: 11999999999)';
       if (form.password !== form.confirmPassword) next.confirmPassword = 'As senhas não correspondem';
     }
     setErrors(next);
@@ -58,6 +61,7 @@ export function AuthPage() {
       } else {
         await register({
           email,
+          phone: form.phone.trim(),
           fullName: form.fullName.trim(),
           password: form.password,
           tenantName: form.tenantName.trim(),
@@ -74,16 +78,21 @@ export function AuthPage() {
 
   const handleForgotPassword = async (e: FormEvent) => {
     e.preventDefault();
-    if (!isValidEmail(form.email.trim())) {
-      setErrors({ email: 'Digite seu e-mail para recuperar a senha' });
+    if (!isValidPhone(form.phone)) {
+      setErrors({ phone: 'Digite um número de WhatsApp válido' });
       return;
     }
     setLoading(true);
-    // TODO: integrar com /api/auth/forgot-password quando o endpoint estiver pronto
-    await new Promise((r) => setTimeout(r, 800));
-    setLoading(false);
-    toast.success('Se este e-mail estiver cadastrado, enviaremos as instruções em breve.');
-    setMode('login');
+    try {
+      await forgotPassword(form.phone.trim());
+      toast.success('Se este número estiver cadastrado, você receberá o link no WhatsApp em breve.');
+      setMode('login');
+    } catch {
+      toast.success('Se este número estiver cadastrado, você receberá o link no WhatsApp em breve.');
+      setMode('login');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const goTo = (m: Mode) => () => { setMode(m); setErrors({}); };
@@ -96,7 +105,7 @@ export function AuthPage() {
   const subtitles: Record<Mode, string> = {
     login: 'Entre para acessar seus dados financeiros',
     register: 'Preencha os dados abaixo para começar',
-    forgot: 'Informe seu e-mail e enviaremos as instruções',
+    forgot: 'Informe seu número de WhatsApp e enviaremos o link de recuperação',
   };
 
   const PasswordToggle = ({ show, onToggle }: { show: boolean; onToggle: () => void }) => (
@@ -231,6 +240,21 @@ export function AuthPage() {
             </div>
 
             <div className="space-y-1.5">
+              <Label htmlFor="reg-phone">WhatsApp <span className="text-muted-foreground font-normal">(para recuperação de senha)</span></Label>
+              <Input
+                id="reg-phone"
+                type="tel"
+                placeholder="11999999999 (sem espaços)"
+                autoComplete="tel"
+                value={form.phone}
+                onChange={set('phone')}
+                className={cn(errors.phone && 'border-destructive')}
+                disabled={loading}
+              />
+              {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
+            </div>
+
+            <div className="space-y-1.5">
               <Label htmlFor="reg-password">Senha</Label>
               <div className="relative">
                 <Input
@@ -284,23 +308,23 @@ export function AuthPage() {
         {mode === 'forgot' && (
           <form onSubmit={handleForgotPassword} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="forgot-email">E-mail cadastrado</Label>
+              <Label htmlFor="forgot-phone">Número de WhatsApp</Label>
               <Input
-                id="forgot-email"
-                type="email"
-                placeholder="seu@email.com"
-                autoComplete="email"
-                value={form.email}
-                onChange={set('email')}
-                className={cn(errors.email && 'border-destructive')}
+                id="forgot-phone"
+                type="tel"
+                placeholder="11999999999"
+                autoComplete="tel"
+                value={form.phone}
+                onChange={set('phone')}
+                className={cn(errors.phone && 'border-destructive')}
                 disabled={loading}
               />
-              {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+              {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-              {loading ? 'Enviando...' : 'Enviar instruções'}
+              {loading ? 'Enviando...' : 'Enviar link pelo WhatsApp'}
             </Button>
 
             <p className="text-center text-sm text-muted-foreground">

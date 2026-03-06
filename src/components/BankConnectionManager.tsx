@@ -3,18 +3,19 @@
  * UI para conectar contas bancárias via Open Finance
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Building2, Trash2, RefreshCw, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { Loader2, Building2, Trash2, RefreshCw, CheckCircle2, XCircle, AlertCircle, WifiOff } from 'lucide-react';
 import { openFinanceService } from '@/lib/openFinance';
 import { bankConnectionStorage } from '@/lib/bankConnectionStorage';
 import { useFinance } from '@/contexts/FinanceContext';
 import { categorizeTransaction } from '@/lib/categoryMatcher';
 import { deduplicateTransactions } from '@/lib/transactionDeduplication';
 import { loadSaasTokens } from '@/lib/saasAuthStorage';
+import { PluggyConnectModal } from '@/components/PluggyConnectModal';
 import type { BankInstitution, BankConnection } from '@/types/openFinance';
 import type { Transaction } from '@/types/finance';
 
@@ -26,6 +27,16 @@ export function BankConnectionManager() {
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Estado do Pluggy Connect Widget (modo real)
+  const [widgetState, setWidgetState] = useState<{
+    open: boolean;
+    connectToken: string;
+    selectedBank: BankInstitution | null;
+  }>({ open: false, connectToken: '', selectedBank: null });
+
+  // Ref para evitar closure desatualizada em callbacks do widget
+  const selectedBankRef = useRef<BankInstitution | null>(null);
 
   useEffect(() => {
     loadData();
@@ -63,6 +74,7 @@ export function BankConnectionManager() {
     setSuccessMessage('');
 
     try {
+      // ── Modo mock (sem credenciais Pluggy configuradas) ──────────────────
       if (openFinanceService.isMockMode()) {
         const mockConnectionId = `conn-${Date.now()}`;
         const mockConnection: BankConnection = {
@@ -76,7 +88,7 @@ export function BankConnectionManager() {
             {
               id: `acc-${Date.now()}`,
               connectionId: mockConnectionId,
-              accountId: 'ext-123',
+              accountId: 'ext-mock-123',
               type: 'CHECKING',
               name: 'Conta Corrente',
               number: '1234',
@@ -88,42 +100,68 @@ export function BankConnectionManager() {
 
         bankConnectionStorage.upsert(mockConnection);
         setConnections(bankConnectionStorage.getAll());
-        setSuccessMessage('Conta conectada em modo demonstração. Configure credenciais Pluggy para dados reais.');
+        setSuccessMessage(
+          '✅ Conta conectada em modo demonstração. Configure PLUGGY_CLIENT_ID/SECRET para dados reais.'
+        );
+        setConnecting(false);
         return;
       }
 
+      // ── Modo real: abre o Pluggy Connect Widget ───────────────────────────
       const connectToken = await openFinanceService.getConnectToken();
 
-      alert(
-        `Conexão real habilitada.\n\n` +
-          `1) Abra seu fluxo Pluggy Connect com este token:\n${connectToken}\n\n` +
-          `2) Após concluir no banco, copie o itemId gerado e cole no próximo campo.`
-      );
-
-      const itemId = window.prompt('Cole o itemId da conexão Pluggy para finalizar a integração:');
-      if (!itemId) {
-        setError('Conexão cancelada: itemId não informado.');
-        return;
-      }
-
-      const trimmedItemId = itemId.trim();
-      const realConnection = await openFinanceService.buildConnectionFromItem(trimmedItemId, {
-        bankId: bank.id,
-        bankName: bank.name,
-        bankLogo: bank.logo,
-      });
-
-      bankConnectionStorage.upsert(realConnection);
-      setConnections(bankConnectionStorage.getAll());
-      setSuccessMessage('Conta conectada com sucesso. Clique em Sincronizar para importar entradas e saídas.');
-
+      selectedBankRef.current = bank;
+      setWidgetState({ open: true, connectToken, selectedBank: bank });
+      // O setConnecting(false) ocorre dentro do callback do widget
     } catch (err) {
-      setError('Erro ao conectar banco. Tente novamente.');
+      setError('Erro ao iniciar conexão bancária. Tente novamente.');
       console.error(err);
-    } finally {
       setConnecting(false);
     }
   };
+
+  /**
+   * Callback chamado pelo Pluggy Connect Widget quando o usuário autoriza
+   * o acesso. Recebe o itemId gerado pela Pluggy.
+   */
+  const handleWidgetSuccess = useCallback(
+    async (itemId: string) => {
+      setWidgetState({ open: false, connectToken: '', selectedBank: null });
+
+      const bank = selectedBankRef.current;
+      if (!bank) return;
+
+      try {
+        const realConnection = await openFinanceService.buildConnectionFromItem(itemId, {
+          bankId: bank.id,
+          bankName: bank.name,
+          bankLogo: bank.logo,
+        });
+
+        bankConnectionStorage.upsert(realConnection);
+        setConnections(bankConnectionStorage.getAll());
+        setSuccessMessage('✅ Conta conectada com sucesso. Clique em Sincronizar para importar transações.');
+      } catch (err) {
+        setError('Conta conectada, mas houve um erro ao carregar os dados. Tente sincronizar manualmente.');
+        console.error(err);
+      } finally {
+        setConnecting(false);
+      }
+    },
+    []
+  );
+
+  const handleWidgetClose = useCallback(() => {
+    setWidgetState({ open: false, connectToken: '', selectedBank: null });
+    setConnecting(false);
+  }, []);
+
+  const handleWidgetError = useCallback((err: unknown) => {
+    setWidgetState({ open: false, connectToken: '', selectedBank: null });
+    const msg = err instanceof Error ? err.message : 'Erro no widget de conexão bancária.';
+    setError(msg);
+    setConnecting(false);
+  }, []);
 
   const handleDisconnect = async (connectionId: string) => {
     if (!confirm('Deseja realmente desconectar esta conta?')) {
@@ -261,6 +299,17 @@ export function BankConnectionManager() {
 
   return (
     <div className="space-y-6">
+      {/* Pluggy Connect Widget (modo real) */}
+      {widgetState.open && (
+        <PluggyConnectModal
+          connectToken={widgetState.connectToken}
+          bankName={widgetState.selectedBank?.name}
+          onSuccess={handleWidgetSuccess}
+          onError={handleWidgetError}
+          onClose={handleWidgetClose}
+        />
+      )}
+
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold">Open Finance</h2>
@@ -268,6 +317,25 @@ export function BankConnectionManager() {
           Conecte suas contas bancárias para importação automática de transações
         </p>
       </div>
+
+      {/* Aviso de modo demonstração */}
+      {!loading && openFinanceService.isMockMode() && (
+        <Alert className="border-yellow-300 bg-yellow-50 dark:bg-yellow-950 dark:border-yellow-800">
+          <WifiOff className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+          <AlertDescription className="text-yellow-700 dark:text-yellow-300 text-sm">
+            <strong>Modo demonstração</strong> — credenciais Pluggy não configuradas.{' '}
+            Para conectar contas reais, adicione{' '}
+            <code className="font-mono text-xs bg-yellow-100 dark:bg-yellow-900 px-1 rounded">
+              PLUGGY_CLIENT_ID
+            </code>{' '}
+            e{' '}
+            <code className="font-mono text-xs bg-yellow-100 dark:bg-yellow-900 px-1 rounded">
+              PLUGGY_CLIENT_SECRET
+            </code>{' '}
+            no <code className="font-mono text-xs">.env</code> do backend.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {error && (
         <Alert variant="destructive">
@@ -420,7 +488,7 @@ export function BankConnectionManager() {
         </div>
       </div>
 
-      {connecting && (
+      {connecting && !widgetState.open && (
         <Alert>
           <Loader2 className="h-4 w-4 animate-spin" />
           <AlertDescription>Conectando ao banco...</AlertDescription>

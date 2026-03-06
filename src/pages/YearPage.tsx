@@ -12,10 +12,13 @@ import {
   Cell,
   Tooltip,
 } from 'recharts';
+import { AdvancedReports } from '@/components/AdvancedReports';
+import { PlanGate } from '@/components/PlanGate';
 
 export function YearPage() {
   const { data, setCurrentMonth, setCurrentYear } = useFinance();
   const [year, setYear] = useState(() => new Date().getFullYear());
+  const [tab, setTab] = useState<'summary' | 'analysis'>('summary');
 
   const summaries = useMemo(() => {
     return Array.from({ length: 12 }, (_, month) => {
@@ -64,7 +67,7 @@ export function YearPage() {
   };
 
   return (
-    <div className="pb-24 space-y-6">
+    <div className="pb-24 space-y-5">
       {/* Year Navigator */}
       <div className="flex items-center justify-center gap-4 py-2">
         <button
@@ -81,6 +84,36 @@ export function YearPage() {
           <ChevronRight className="w-5 h-5" />
         </button>
       </div>
+
+      {/* Tabs */}
+      <div className="flex rounded-lg bg-muted p-1 gap-1">
+        <button
+          onClick={() => setTab('summary')}
+          className={cn(
+            'flex-1 text-sm font-medium py-1.5 rounded-md transition-all',
+            tab === 'summary'
+              ? 'bg-card shadow-sm text-foreground'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          Resumo Anual
+        </button>
+        <button
+          onClick={() => setTab('analysis')}
+          className={cn(
+            'flex-1 text-sm font-medium py-1.5 rounded-md transition-all',
+            tab === 'analysis'
+              ? 'bg-card shadow-sm text-foreground'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          Análise Avançada
+        </button>
+      </div>
+
+      {/* ── Aba: Resumo Anual ─────────────────────────────────────────────── */}
+      {tab === 'summary' && (
+        <div className="space-y-6">
 
       {/* Year Summary */}
       <div className="grid grid-cols-3 gap-3">
@@ -168,6 +201,19 @@ export function YearPage() {
           </button>
         ))}
       </div>
+      </div>
+      )}
+
+      {/* ── Aba: Análise Avançada ─────────────────────────────────────────── */}
+      {tab === 'analysis' && (
+        <PlanGate
+          feature="canUseAdvancedReports"
+          title="Análise avançada — plano Pró"
+          description="Acesse breakdown por categoria, evolução patrimonial, top gastos e fontes de renda com o plano Pró."
+        >
+          <AdvancedReports year={year} />
+        </PlanGate>
+      )}
     </div>
   );
 }
