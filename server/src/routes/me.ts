@@ -220,6 +220,7 @@ meRouter.post('/me/tenants', requireAuth, async (req, res) => {
         profileType: parsed.data.profileType,
         cnpj: parsed.data.cnpj ?? null,
         razaoSocial: parsed.data.razaoSocial ?? null,
+        ownerId: auth.userId,
       },
     });
 

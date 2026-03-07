@@ -62,7 +62,7 @@ authRouter.post('/register', async (req, res) => {
     });
 
     const tenant = await tx.tenant.create({
-      data: { name: tenantName, profileType: 'personal' },
+      data: { name: tenantName, profileType: 'personal', ownerId: user.id },
     });
 
     const membership = await tx.membership.create({
