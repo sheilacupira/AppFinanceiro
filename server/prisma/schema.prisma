@@ -34,10 +34,10 @@ model Tenant {
   profileType   String         @default("personal") // 'personal' | 'business'
   cnpj          String?
   razaoSocial   String?
-  stripeCustomerId String?     @unique
-  stripeSubscriptionId String?
-  billingPlan   String         @default("free")
-  billingStatus String?
+  mpCustomerId         String?
+  mpSubscriptionId     String?
+  billingPlan          String  @default("free")
+  billingStatus        String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   owner         User           @relation("OwnedTenants", fields: [ownerId], references: [id])

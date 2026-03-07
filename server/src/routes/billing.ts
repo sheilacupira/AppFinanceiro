@@ -1,11 +1,14 @@
+import crypto from 'crypto';
 import express, { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/auth.js';
 import { prisma } from '../lib/prisma.js';
 import { env } from '../config/env.js';
-import { getPriceId, getStripeClient } from '../lib/stripe.js';
+import { getMPClient, getPreApproval, getPayment, getPlanConfig } from '../lib/mercadopago.js';
 
 export const billingRouter = Router();
+
+// ── Schemas ──────────────────────────────────────────────────────────────────
 
 const checkoutSchema = z.object({
   planId: z.enum(['pro', 'enterprise']),
@@ -24,70 +27,32 @@ const changePlanSchema = z.object({
   interval: z.enum(['month', 'year']),
 });
 
-const portalSchema = z.object({
-  returnUrl: z.string().url().optional(),
-});
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-const mapStripeStatus = (status: string) => {
-  if (status === 'active' || status === 'canceled' || status === 'past_due' || status === 'trialing' || status === 'incomplete' || status === 'incomplete_expired') {
-    return status;
+const mpStatusToBillingStatus = (status: string): string => {
+  switch (status) {
+    case 'authorized': return 'active';
+    case 'paused':     return 'past_due';
+    case 'cancelled':  return 'canceled';
+    case 'pending':    return 'incomplete';
+    case 'expired':    return 'incomplete_expired';
+    default:           return status;
   }
-  return 'active';
 };
 
-const getOrCreateCustomer = async (tenantId: string, userId: string) => {
-  const stripe = getStripeClient();
-  if (!stripe) {
-    return { error: 'Stripe is not configured' } as const;
-  }
-
+const getUserEmail = async (userId: string, tenantId: string): Promise<string | null> => {
   const membership = await prisma.membership.findUnique({
-    where: {
-      userId_tenantId: {
-        userId,
-        tenantId,
-      },
-    },
-    include: {
-      user: true,
-      tenant: true,
-    },
+    where: { userId_tenantId: { userId, tenantId } },
+    include: { user: true },
   });
-
-  if (!membership) {
-    return { error: 'Membership not found' } as const;
-  }
-
-  if (membership.tenant.stripeCustomerId) {
-    const customer = await stripe.customers.retrieve(membership.tenant.stripeCustomerId);
-    if (!('deleted' in customer && customer.deleted)) {
-      return { stripe, customerId: customer.id } as const;
-    }
-  }
-
-  const customer = await stripe.customers.create({
-    email: membership.user.email,
-    name: membership.user.fullName,
-    metadata: {
-      tenantId: membership.tenant.id,
-      userId: membership.user.id,
-    },
-  });
-
-  await prisma.tenant.update({
-    where: { id: membership.tenant.id },
-    data: { stripeCustomerId: customer.id },
-  });
-
-  return { stripe, customerId: customer.id } as const;
+  return membership?.user.email ?? null;
 };
+
+// ── POST /checkout ────────────────────────────────────────────────────────────
 
 billingRouter.post('/checkout', requireAuth, async (req, res) => {
   const auth = req.auth;
-  if (!auth) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
-  }
+  if (!auth) { res.status(401).json({ error: 'Unauthorized' }); return; }
 
   const parsed = checkoutSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -95,96 +60,92 @@ billingRouter.post('/checkout', requireAuth, async (req, res) => {
     return;
   }
 
-  const { planId, interval, successUrl, cancelUrl } = parsed.data;
-
-  const priceId = getPriceId(planId, interval);
-  if (!priceId) {
-    res.status(400).json({ error: 'Stripe price not configured for selected plan' });
+  const mp = getPreApproval();
+  if (!mp) {
+    res.status(503).json({ error: 'Mercado Pago não está configurado' });
     return;
   }
 
-  const customerResult = await getOrCreateCustomer(auth.tenantId, auth.userId);
-  if ('error' in customerResult) {
-    res.status(503).json({ error: customerResult.error });
+  const { planId, interval, successUrl, cancelUrl: _cancelUrl } = parsed.data;
+  const planCfg = getPlanConfig(planId, interval);
+  if (!planCfg) {
+    res.status(400).json({ error: 'Plano não encontrado' });
     return;
   }
 
-  const session = await customerResult.stripe.checkout.sessions.create({
-    mode: 'subscription',
-    customer: customerResult.customerId,
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: successUrl,
-    cancel_url: cancelUrl,
-    metadata: {
-      tenantId: auth.tenantId,
-      userId: auth.userId,
-      planId,
-      interval,
+  const payerEmail = await getUserEmail(auth.userId, auth.tenantId);
+  if (!payerEmail) {
+    res.status(404).json({ error: 'Usuário não encontrado' });
+    return;
+  }
+
+  const result = await mp.create({
+    body: {
+      reason: planCfg.reason,
+      auto_recurring: {
+        frequency: planCfg.frequency,
+        frequency_type: planCfg.frequencyType,
+        transaction_amount: planCfg.amount,
+        currency_id: 'BRL',
+      },
+      back_url: successUrl,
+      payer_email: payerEmail,
+      external_reference: JSON.stringify({ tenantId: auth.tenantId, planId, interval }),
     },
   });
 
   res.json({
-    sessionId: session.id,
-    url: session.url,
+    sessionId: result.id,
+    url: result.init_point,
   });
 });
+
+// ── GET /subscription ─────────────────────────────────────────────────────────
 
 billingRouter.get('/subscription', requireAuth, async (req, res) => {
   const auth = req.auth;
-  if (!auth) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
-  }
+  if (!auth) { res.status(401).json({ error: 'Unauthorized' }); return; }
 
-  const stripe = getStripeClient();
-  if (!stripe) {
-    res.json(null);
-    return;
-  }
+  if (!getMPClient()) { res.json(null); return; }
 
   const tenant = await prisma.tenant.findUnique({ where: { id: auth.tenantId } });
-  if (!tenant?.stripeCustomerId) {
-    res.json(null);
-    return;
-  }
+  if (!tenant?.mpSubscriptionId) { res.json(null); return; }
 
-  const stripeSubscriptions = await stripe.subscriptions.list({
-    customer: tenant.stripeCustomerId,
-    status: 'all',
-    limit: 10,
-  });
+  const mp = getPreApproval();
+  if (!mp) { res.json(null); return; }
 
-  const subscription = stripeSubscriptions.data.find((item) => item.status !== 'incomplete_expired') ?? stripeSubscriptions.data[0];
+  const sub = await mp.get({ id: tenant.mpSubscriptionId });
+  if (!sub) { res.json(null); return; }
 
-  if (!subscription) {
-    res.json(null);
-    return;
-  }
+  const recurring = sub.auto_recurring as {
+    frequency?: number;
+    frequency_type?: string;
+    transaction_amount?: number;
+    start_date?: string;
+    end_date?: string;
+  } | undefined;
 
-  const item = subscription.items.data[0];
-  const currentPeriodStart = item ? new Date(item.current_period_start * 1000) : new Date(subscription.created * 1000);
-  const currentPeriodEnd = item ? new Date(item.current_period_end * 1000) : new Date(subscription.created * 1000);
+  const startDate = recurring?.start_date ? new Date(recurring.start_date) : new Date(sub.date_created ?? Date.now());
+  const endDate   = recurring?.end_date   ? new Date(recurring.end_date)   : new Date(Date.now() + 30 * 24 * 3600_000);
 
   res.json({
-    id: subscription.id,
+    id: sub.id,
     userId: auth.userId,
     planId: tenant.billingPlan,
-    status: mapStripeStatus(subscription.status),
-    currentPeriodStart,
-    currentPeriodEnd,
-    cancelAtPeriodEnd: subscription.cancel_at_period_end,
-    trialEnd: subscription.trial_end ? new Date(subscription.trial_end * 1000) : undefined,
-    stripeSubscriptionId: subscription.id,
-    stripeCustomerId: tenant.stripeCustomerId,
+    status: mpStatusToBillingStatus(sub.status ?? 'pending'),
+    currentPeriodStart: startDate,
+    currentPeriodEnd:   endDate,
+    cancelAtPeriodEnd:  sub.status === 'cancelled',
+    mpSubscriptionId:   sub.id,
+    mpCustomerId:       tenant.mpCustomerId,
   });
 });
 
+// ── POST /subscription/cancel ─────────────────────────────────────────────────
+
 billingRouter.post('/subscription/cancel', requireAuth, async (req, res) => {
   const auth = req.auth;
-  if (!auth) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
-  }
+  if (!auth) { res.status(401).json({ error: 'Unauthorized' }); return; }
 
   const parsed = subscriptionActionSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -192,27 +153,16 @@ billingRouter.post('/subscription/cancel', requireAuth, async (req, res) => {
     return;
   }
 
-  const stripe = getStripeClient();
-  if (!stripe) {
-    res.status(503).json({ error: 'Stripe is not configured' });
-    return;
-  }
+  const mp = getPreApproval();
+  if (!mp) { res.status(503).json({ error: 'Mercado Pago não está configurado' }); return; }
 
   const tenant = await prisma.tenant.findUnique({ where: { id: auth.tenantId } });
-  if (!tenant?.stripeCustomerId) {
-    res.status(404).json({ error: 'No Stripe customer found for tenant' });
+  if (!tenant?.mpSubscriptionId || tenant.mpSubscriptionId !== parsed.data.subscriptionId) {
+    res.status(404).json({ error: 'Assinatura não encontrada para este tenant' });
     return;
   }
 
-  const subscription = await stripe.subscriptions.retrieve(parsed.data.subscriptionId);
-  if (subscription.customer !== tenant.stripeCustomerId) {
-    res.status(403).json({ error: 'Subscription does not belong to tenant' });
-    return;
-  }
-
-  await stripe.subscriptions.update(subscription.id, {
-    cancel_at_period_end: true,
-  });
+  await mp.update({ id: parsed.data.subscriptionId, body: { status: 'cancelled' } });
 
   await prisma.tenant.update({
     where: { id: auth.tenantId },
@@ -222,12 +172,11 @@ billingRouter.post('/subscription/cancel', requireAuth, async (req, res) => {
   res.status(204).end();
 });
 
+// ── POST /subscription/reactivate ─────────────────────────────────────────────
+
 billingRouter.post('/subscription/reactivate', requireAuth, async (req, res) => {
   const auth = req.auth;
-  if (!auth) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
-  }
+  if (!auth) { res.status(401).json({ error: 'Unauthorized' }); return; }
 
   const parsed = subscriptionActionSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -235,42 +184,30 @@ billingRouter.post('/subscription/reactivate', requireAuth, async (req, res) => 
     return;
   }
 
-  const stripe = getStripeClient();
-  if (!stripe) {
-    res.status(503).json({ error: 'Stripe is not configured' });
-    return;
-  }
+  const mp = getPreApproval();
+  if (!mp) { res.status(503).json({ error: 'Mercado Pago não está configurado' }); return; }
 
   const tenant = await prisma.tenant.findUnique({ where: { id: auth.tenantId } });
-  if (!tenant?.stripeCustomerId) {
-    res.status(404).json({ error: 'No Stripe customer found for tenant' });
+  if (!tenant?.mpSubscriptionId || tenant.mpSubscriptionId !== parsed.data.subscriptionId) {
+    res.status(404).json({ error: 'Assinatura não encontrada para este tenant' });
     return;
   }
 
-  const subscription = await stripe.subscriptions.retrieve(parsed.data.subscriptionId);
-  if (subscription.customer !== tenant.stripeCustomerId) {
-    res.status(403).json({ error: 'Subscription does not belong to tenant' });
-    return;
-  }
-
-  await stripe.subscriptions.update(subscription.id, {
-    cancel_at_period_end: false,
-  });
+  await mp.update({ id: parsed.data.subscriptionId, body: { status: 'authorized' } });
 
   await prisma.tenant.update({
     where: { id: auth.tenantId },
-    data: { billingStatus: subscription.status },
+    data: { billingStatus: 'active' },
   });
 
   res.status(204).end();
 });
 
+// ── POST /subscription/change-plan ───────────────────────────────────────────
+
 billingRouter.post('/subscription/change-plan', requireAuth, async (req, res) => {
   const auth = req.auth;
-  if (!auth) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
-  }
+  if (!auth) { res.status(401).json({ error: 'Unauthorized' }); return; }
 
   const parsed = changePlanSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -278,211 +215,165 @@ billingRouter.post('/subscription/change-plan', requireAuth, async (req, res) =>
     return;
   }
 
-  const stripe = getStripeClient();
-  if (!stripe) {
-    res.status(503).json({ error: 'Stripe is not configured' });
-    return;
-  }
+  const mp = getPreApproval();
+  if (!mp) { res.status(503).json({ error: 'Mercado Pago não está configurado' }); return; }
 
   const tenant = await prisma.tenant.findUnique({ where: { id: auth.tenantId } });
-  if (!tenant?.stripeCustomerId) {
-    res.status(404).json({ error: 'No Stripe customer found for tenant' });
+  if (!tenant?.mpSubscriptionId || tenant.mpSubscriptionId !== parsed.data.subscriptionId) {
+    res.status(404).json({ error: 'Assinatura não encontrada para este tenant' });
     return;
   }
 
-  const priceId = getPriceId(parsed.data.newPlanId, parsed.data.interval);
-  if (!priceId) {
-    res.status(400).json({ error: 'Stripe price not configured for target plan' });
+  const planCfg = getPlanConfig(parsed.data.newPlanId, parsed.data.interval);
+  if (!planCfg) {
+    res.status(400).json({ error: 'Plano não encontrado' });
     return;
   }
 
-  const subscription = await stripe.subscriptions.retrieve(parsed.data.subscriptionId);
-  if (subscription.customer !== tenant.stripeCustomerId) {
-    res.status(403).json({ error: 'Subscription does not belong to tenant' });
-    return;
-  }
-
-  const item = subscription.items.data[0];
-  if (!item) {
-    res.status(400).json({ error: 'Subscription has no items' });
-    return;
-  }
-
-  const updated = await stripe.subscriptions.update(subscription.id, {
-    items: [{ id: item.id, price: priceId }],
-    cancel_at_period_end: false,
-    proration_behavior: 'create_prorations',
+  await mp.update({
+    id: parsed.data.subscriptionId,
+    body: {
+      reason: planCfg.reason,
+      auto_recurring: {
+        transaction_amount: planCfg.amount,
+        currency_id: 'BRL',
+      },
+    },
   });
 
   await prisma.tenant.update({
     where: { id: auth.tenantId },
-    data: {
-      billingPlan: parsed.data.newPlanId,
-      billingStatus: updated.status,
-      stripeSubscriptionId: updated.id,
-    },
+    data: { billingPlan: parsed.data.newPlanId },
   });
 
   res.status(204).end();
 });
 
+// ── GET /invoices ──────────────────────────────────────────────────────────────
+
 billingRouter.get('/invoices', requireAuth, async (req, res) => {
   const auth = req.auth;
-  if (!auth) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
-  }
+  if (!auth) { res.status(401).json({ error: 'Unauthorized' }); return; }
 
-  const stripe = getStripeClient();
-  if (!stripe) {
-    res.json([]);
-    return;
-  }
+  if (!getMPClient()) { res.json([]); return; }
 
   const tenant = await prisma.tenant.findUnique({ where: { id: auth.tenantId } });
-  if (!tenant?.stripeCustomerId) {
-    res.json([]);
-    return;
-  }
+  if (!tenant?.mpSubscriptionId) { res.json([]); return; }
 
-  const invoices = await stripe.invoices.list({
-    customer: tenant.stripeCustomerId,
-    limit: 12,
+  const payment = getPayment();
+  if (!payment) { res.json([]); return; }
+
+  const results = await payment.search({
+    options: {
+      preapproval_id: tenant.mpSubscriptionId,
+      limit: 12,
+    },
   });
 
+  const payments = results.results ?? [];
+
   res.json(
-    invoices.data.map((invoice) => ({
-      id: invoice.id,
-      subscriptionId:
-        typeof invoice.parent?.subscription_details?.subscription === 'string'
-          ? invoice.parent.subscription_details.subscription
-          : invoice.parent?.subscription_details?.subscription?.id,
-      amount: (invoice.amount_paid || invoice.amount_due || 0) / 100,
-      status: invoice.status || 'open',
-      createdAt: new Date(invoice.created * 1000),
-      paidAt: invoice.status_transitions.paid_at ? new Date(invoice.status_transitions.paid_at * 1000) : undefined,
-      invoiceUrl: invoice.hosted_invoice_url,
-      receiptUrl: invoice.invoice_pdf,
+    payments.map((p) => ({
+      id: String(p.id),
+      subscriptionId: tenant.mpSubscriptionId,
+      amount: p.transaction_amount ?? 0,
+      status: p.status ?? 'pending',
+      createdAt: p.date_created ? new Date(p.date_created) : new Date(),
+      paidAt: p.date_approved ? new Date(p.date_approved) : undefined,
+      invoiceUrl: undefined,
+      receiptUrl: undefined,
     })),
   );
 });
 
-billingRouter.get('/payment-methods', requireAuth, async (req, res) => {
-  const auth = req.auth;
-  if (!auth) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
-  }
+// ── GET /payment-methods ───────────────────────────────────────────────────────
 
-  const stripe = getStripeClient();
-  if (!stripe) {
-    res.json([]);
-    return;
-  }
-
-  const tenant = await prisma.tenant.findUnique({ where: { id: auth.tenantId } });
-  if (!tenant?.stripeCustomerId) {
-    res.json([]);
-    return;
-  }
-
-  const paymentMethods = await stripe.paymentMethods.list({
-    customer: tenant.stripeCustomerId,
-    type: 'card',
-    limit: 10,
-  });
-
-  res.json(
-    paymentMethods.data.map((method) => ({
-      id: method.id,
-      type: 'card',
-      last4: method.card?.last4,
-      brand: method.card?.brand,
-      expiryMonth: method.card?.exp_month,
-      expiryYear: method.card?.exp_year,
-      isDefault: false,
-    })),
-  );
+billingRouter.get('/payment-methods', requireAuth, async (_req, res) => {
+  // MP não expõe métodos de pagamento via API de assinaturas
+  res.json([]);
 });
+
+// ── POST /portal ───────────────────────────────────────────────────────────────
 
 billingRouter.post('/portal', requireAuth, async (req, res) => {
   const auth = req.auth;
-  if (!auth) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
-  }
+  if (!auth) { res.status(401).json({ error: 'Unauthorized' }); return; }
 
-  const parsed = portalSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: 'Invalid payload', details: parsed.error.flatten() });
-    return;
-  }
+  const tenant = await prisma.tenant.findUnique({ where: { id: auth.tenantId } });
 
-  const customerResult = await getOrCreateCustomer(auth.tenantId, auth.userId);
-  if ('error' in customerResult) {
-    res.status(503).json({ error: customerResult.error });
-    return;
-  }
+  const url = tenant?.mpSubscriptionId
+    ? `https://www.mercadopago.com.br/subscriptions`
+    : env.BILLING_PORTAL_RETURN_URL;
 
-  const session = await customerResult.stripe.billingPortal.sessions.create({
-    customer: customerResult.customerId,
-    return_url: parsed.data.returnUrl || env.BILLING_PORTAL_RETURN_URL,
-  });
-
-  res.json({ url: session.url });
+  res.json({ url });
 });
 
-export const stripeWebhookHandler = express.raw({ type: 'application/json' });
+// ── POST /webhook ─────────────────────────────────────────────────────────────
+// Mercado Pago POST /api/billing/webhook
+// Headers: x-signature: ts=...,v1=...   x-mp-request-id: ...
+// Body: { type: "preapproval", action: "...", data: { id: "..." } }
 
-export const handleStripeWebhook = async (req: express.Request, res: express.Response) => {
-  const stripe = getStripeClient();
-  if (!stripe || !env.STRIPE_WEBHOOK_SECRET) {
-    res.status(503).json({ error: 'Stripe webhook is not configured' });
-    return;
-  }
+export const handleMPWebhook = async (req: express.Request, res: express.Response) => {
+  if (env.MP_WEBHOOK_SECRET) {
+    const xSignature = req.headers['x-signature'];
+    const xRequestId = req.headers['x-mp-request-id'];
+    const dataId = (req.body as Record<string, { id?: string }>)?.data?.id;
 
-  const signature = req.headers['stripe-signature'];
-  if (!signature || Array.isArray(signature)) {
-    res.status(400).json({ error: 'Missing stripe-signature header' });
-    return;
-  }
+    if (xSignature && typeof xSignature === 'string' && xRequestId && dataId) {
+      const parts = xSignature.split(',');
+      const ts = parts.find((p) => p.startsWith('ts='))?.split('=')[1];
+      const v1 = parts.find((p) => p.startsWith('v1='))?.split('=')[1];
 
-  let event;
-  try {
-    event = stripe.webhooks.constructEvent(req.body, signature, env.STRIPE_WEBHOOK_SECRET);
-  } catch (error) {
-    res.status(400).json({ error: 'Invalid webhook signature' });
-    return;
-  }
-
-  if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.created' || event.type === 'customer.subscription.deleted') {
-    const subscription = event.data.object;
-    const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
-
-    await prisma.tenant.updateMany({
-      where: { stripeCustomerId: customerId },
-      data: {
-        stripeSubscriptionId: subscription.id,
-        billingStatus: subscription.status,
-      },
-    });
-  }
-
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object;
-    if (session.mode === 'subscription') {
-      const tenantId = session.metadata?.tenantId;
-      const planId = session.metadata?.planId;
-      if (tenantId && (planId === 'pro' || planId === 'enterprise')) {
-        await prisma.tenant.update({
-          where: { id: tenantId },
-          data: {
-            billingPlan: planId,
-            stripeSubscriptionId: typeof session.subscription === 'string' ? session.subscription : null,
-            billingStatus: 'active',
-          },
-        });
+      if (ts && v1) {
+        const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
+        const expected = crypto.createHmac('sha256', env.MP_WEBHOOK_SECRET).update(manifest).digest('hex');
+        if (expected !== v1) {
+          res.status(400).json({ error: 'Invalid webhook signature' });
+          return;
+        }
       }
+    }
+  }
+
+  const body = req.body as { type?: string; data?: { id?: string } };
+  const { type, data } = body;
+
+  if (type === 'preapproval' && data?.id) {
+    const mp = getPreApproval();
+    if (mp) {
+      try {
+        const sub = await mp.get({ id: data.id });
+        if (sub?.id) {
+          let tenantId: string | null = null;
+          let planId: string | null = null;
+
+          if (sub.external_reference) {
+            try {
+              const ref = JSON.parse(sub.external_reference) as { tenantId?: string; planId?: string };
+              tenantId = ref.tenantId ?? null;
+              planId = ref.planId ?? null;
+            } catch { /* ignore */ }
+          }
+
+          const billingStatus = mpStatusToBillingStatus(sub.status ?? 'pending');
+
+          if (tenantId) {
+            await prisma.tenant.update({
+              where: { id: tenantId },
+              data: {
+                mpSubscriptionId: sub.id,
+                billingStatus,
+                ...(planId === 'pro' || planId === 'enterprise' ? { billingPlan: planId } : {}),
+              },
+            });
+          } else {
+            await prisma.tenant.updateMany({
+              where: { mpSubscriptionId: sub.id },
+              data: { billingStatus },
+            });
+          }
+        }
+      } catch { /* log silencioso */ }
     }
   }
 

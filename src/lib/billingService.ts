@@ -1,6 +1,6 @@
 /**
  * Billing Service
- * Gerenciamento de assinaturas e pagamentos com Stripe
+ * Gerenciamento de assinaturas e pagamentos com Mercado Pago
  */
 
 import type { Subscription, Invoice, PaymentMethod, BillingInterval } from '@/types/billing';
@@ -17,13 +17,13 @@ class BillingService {
   }
 
   async initialize() {
-    this.publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || null;
+    const configured = Boolean(import.meta.env.VITE_MP_PUBLIC_KEY);
 
-    if (!this.publishableKey) {
-      console.warn('⚠️ Stripe publishable key not found. Running in MOCK mode.');
+    if (!configured) {
+      console.warn('⚠️ Mercado Pago public key not found. Running in MOCK mode.');
       this.mockMode = true;
     } else {
-      console.log('✅ Stripe initialized successfully');
+      console.log('✅ Mercado Pago initialized successfully');
       this.mockMode = false;
     }
   }

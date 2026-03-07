@@ -6,7 +6,7 @@ import { authRouter } from './routes/auth.js';
 import { meRouter } from './routes/me.js';
 import { transactionsRouter } from './routes/transactions.js';
 import { financeMetaRouter } from './routes/financeMeta.js';
-import { billingRouter, handleStripeWebhook, stripeWebhookHandler } from './routes/billing.js';
+import { billingRouter, handleMPWebhook } from './routes/billing.js';
 import { openFinanceRouter } from './routes/openFinance.js';
 import { invitesRouter } from './routes/invites.js';
 import { membersRouter } from './routes/members.js';
@@ -39,8 +39,8 @@ app.use(
   })
 );
 
-app.post('/api/billing/webhook', stripeWebhookHandler, (req, res) => {
-  void handleStripeWebhook(req, res);
+app.post('/api/billing/webhook', express.json(), (req, res) => {
+  void handleMPWebhook(req, res);
 });
 
 app.use(express.json());
