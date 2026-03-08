@@ -17,14 +17,20 @@ class BillingService {
   }
 
   async initialize() {
-    const configured = Boolean(import.meta.env.VITE_MP_PUBLIC_KEY);
-
-    if (!configured) {
-      console.warn('⚠️ Mercado Pago public key not found. Running in MOCK mode.');
+    try {
+      const token = this.getAuthToken();
+      const data = await apiRequest<{ configured: boolean }>('/api/billing/status', {
+        token: token ?? undefined,
+      });
+      this.mockMode = !data.configured;
+      if (this.mockMode) {
+        console.warn('⚠️ Mercado Pago não configurado no servidor. Modo mock ativado.');
+      } else {
+        console.log('✅ Mercado Pago configurado. Modo real ativado.');
+      }
+    } catch {
+      console.warn('⚠️ Não foi possível verificar configuração do billing. Modo mock ativado.');
       this.mockMode = true;
-    } else {
-      console.log('✅ Mercado Pago initialized successfully');
-      this.mockMode = false;
     }
   }
 

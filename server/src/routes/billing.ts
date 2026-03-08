@@ -48,6 +48,13 @@ const getUserEmail = async (userId: string, tenantId: string): Promise<string | 
   return membership?.user.email ?? null;
 };
 
+// ── GET /status ───────────────────────────────────────────────────────────────
+
+billingRouter.get('/status', async (_req, res) => {
+  const configured = Boolean(getMPClient());
+  res.json({ configured });
+});
+
 // ── POST /checkout ────────────────────────────────────────────────────────────
 
 billingRouter.post('/checkout', requireAuth, async (req, res) => {
