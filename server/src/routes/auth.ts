@@ -154,7 +154,7 @@ authRouter.post('/login', async (req, res) => {
     return;
   }
 
-  const membership = user.memberships[0];
+  const membership = user.memberships.find((m) => m.role === 'OWNER') ?? user.memberships[0];
   if (!membership) {
     res.status(403).json({ error: 'User has no tenant membership' });
     return;
