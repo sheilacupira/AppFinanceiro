@@ -131,7 +131,7 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 md:p-8 space-y-5 md:space-y-6">
       {toast && (
         <div className="fixed top-4 right-4 bg-gray-800 border border-gray-600 text-white rounded-xl px-4 py-3 text-sm z-50 max-w-xs">
           {toast}
@@ -177,7 +177,7 @@ export default function AdminUsersPage() {
       </div>
 
       {/* Tabela */}
-      <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
+      <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-800 text-gray-400 text-xs uppercase tracking-wider">

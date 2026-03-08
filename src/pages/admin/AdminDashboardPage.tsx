@@ -30,7 +30,7 @@ export default function AdminDashboardPage() {
     : 'primeiro mês';
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-4 md:p-8 space-y-6 md:space-y-8">
       <h1 className="text-2xl font-bold text-white">Dashboard</h1>
 
       {/* Usuários */}
