@@ -187,6 +187,48 @@ adminRouter.get('/users', async (req, res) => {
   });
 });
 
+// ── GET /admin/debug-user?email=xxx ───────────────────────────────────────────
+adminRouter.get('/debug-user', async (req, res) => {
+  const email = String(req.query.email ?? '');
+  const user = await prisma.user.findUnique({
+    where: { email },
+    include: { memberships: { include: { tenant: true }, orderBy: { createdAt: 'asc' } } },
+  });
+  if (!user) { res.status(404).json({ error: 'User not found' }); return; }
+  res.json({
+    userId: user.id,
+    email: user.email,
+    memberships: user.memberships.map((m) => ({
+      role: m.role,
+      tenantId: m.tenantId,
+      tenantName: m.tenant.name,
+      billingPlan: m.tenant.billingPlan,
+      billingStatus: m.tenant.billingStatus,
+      giftExpiry: m.tenant.giftExpiry,
+      createdAt: m.createdAt,
+    })),
+    ownerTenant: user.memberships.find((m) => m.role === 'OWNER')?.tenantId ?? 'NONE',
+  });
+});
+
+// ── POST /admin/force-plan ─────────────────────────────────────────────────────
+adminRouter.post('/force-plan', async (req, res) => {
+  const { email, plan = 'pro' } = req.body as { email: string; plan?: string };
+  const user = await prisma.user.findUnique({
+    where: { email },
+    include: { memberships: { where: { role: 'OWNER' }, orderBy: { createdAt: 'asc' }, take: 1 } },
+  });
+  if (!user) { res.status(404).json({ error: 'User not found' }); return; }
+  if (!user.memberships[0]) { res.status(404).json({ error: 'No OWNER membership' }); return; }
+  const giftExpiry = new Date();
+  giftExpiry.setFullYear(giftExpiry.getFullYear() + 1);
+  const updated = await prisma.tenant.update({
+    where: { id: user.memberships[0].tenantId },
+    data: { billingPlan: plan, billingStatus: 'gift', giftExpiry },
+  });
+  res.json({ ok: true, tenantId: updated.id, billingPlan: updated.billingPlan, giftExpiry: updated.giftExpiry });
+});
+
 // ── POST /admin/gift ───────────────────────────────────────────────────────────
 
 adminRouter.post('/gift', async (req, res) => {
