@@ -3,6 +3,7 @@ import { MembershipRole } from '@prisma/client';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/auth.js';
 import { prisma } from '../lib/prisma.js';
+import { env } from '../config/env.js';
 
 export const invitesRouter = Router();
 
@@ -78,7 +79,7 @@ invitesRouter.post('/me/invites', requireAuth, async (req, res) => {
     include: { tenant: { select: { name: true } } },
   });
 
-  const inviteUrl = `${process.env.FRONTEND_URL ?? 'http://localhost:8080'}/invite/${invite.token}`;
+  const inviteUrl = `${env.APP_URL}/invite/${invite.token}`;
 
   res.status(201).json({
     invite: {
