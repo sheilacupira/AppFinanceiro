@@ -149,6 +149,11 @@ authRouter.post('/login', async (req, res) => {
     return;
   }
 
+  if (user.isBlocked) {
+    res.status(403).json({ error: 'Conta suspensa. Entre em contato com o suporte.' });
+    return;
+  }
+
   const membership = user.memberships[0];
   if (!membership) {
     res.status(403).json({ error: 'User has no tenant membership' });

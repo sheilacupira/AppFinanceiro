@@ -9,6 +9,11 @@ import Index from "./pages/Index";
 import InvitePage from "./pages/InvitePage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import NotFound from "./pages/NotFound";
+import AdminLoginPage from "./pages/admin/AdminLoginPage";
+import AdminLayout from "./pages/admin/AdminLayout";
+import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
+import AdminUsersPage from "./pages/admin/AdminUsersPage";
+import AdminAffiliatesPage from "./pages/admin/AdminAffiliatesPage";
 
 interface ErrorBoundaryState { hasError: boolean; message: string }
 
@@ -53,6 +58,13 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/invite/:token" element={<InvitePage />} />
               <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+              {/* Admin panel */}
+              <Route path="/admin" element={<AdminLoginPage />} />
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route path="dashboard" element={<AdminDashboardPage />} />
+                <Route path="users" element={<AdminUsersPage />} />
+                <Route path="affiliates" element={<AdminAffiliatesPage />} />
+              </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

@@ -27,6 +27,7 @@ const envSchema = z.object({
   // URL pública do app (usada para montar o link de reset)
   APP_URL: z.string().default('http://localhost:8080'),
   // Admin
+  ADMIN_EMAIL: z.string().email().default('sheilacupira@gmail.com'),
   ADMIN_SECRET: z.string().min(8).default('change-me-in-production'),
   // WhatsApp — Evolution API
   EVOLUTION_API_URL: z.string().optional(),

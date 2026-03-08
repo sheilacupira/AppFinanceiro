@@ -19,12 +19,15 @@ model User {
   phone               String?              @unique
   fullName            String
   passwordHash        String
+  referralCode        String?              // código do afiliado que indicou este usuário
+  isBlocked           Boolean              @default(false)
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   memberships         Membership[]
   refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
   ownedTenants        Tenant[]             @relation("OwnedTenants")
+  affiliateProfile    Affiliate?           @relation("AffiliateUser")
 }
 
 model Tenant {
@@ -202,4 +205,45 @@ model FinanceSettings {
   updatedAt DateTime    @updatedAt
 
   tenant    Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+// ── Afiliados ─────────────────────────────────────────────────────────────────
+
+model Affiliate {
+  id             String              @id @default(cuid())
+  userId         String?             @unique
+  name           String
+  email          String              @unique
+  code           String              @unique // código de indicação ex: SHEILA20
+  commissionRate Float               @default(0.20) // 20%
+  status         String              @default("active") // active | inactive | suspended
+  totalEarned    Float               @default(0)
+  totalPaid      Float               @default(0)
+  notes          String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  user           User?               @relation("AffiliateUser", fields: [userId], references: [id])
+  referrals      AffiliateReferral[]
+
+  @@index([code])
+}
+
+model AffiliateReferral {
+  id               String    @id @default(cuid())
+  affiliateId      String
+  referredEmail    String
+  referredUserId   String?
+  tenantId         String?
+  plan             String?   // plano que assinou
+  commissionAmount Float     @default(0)
+  status           String    @default("pending") // pending | confirmed | paid | cancelled
+  createdAt        DateTime  @default(now())
+  confirmedAt      DateTime?
+  paidAt           DateTime?
+
+  affiliate        Affiliate @relation(fields: [affiliateId], references: [id])
+
+  @@index([affiliateId])
+  @@index([referredEmail])
 }

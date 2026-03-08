@@ -8,6 +8,7 @@ import { transactionsRouter } from './routes/transactions.js';
 import { financeMetaRouter } from './routes/financeMeta.js';
 import { billingRouter, handleMPWebhook } from './routes/billing.js';
 import { adminRouter } from './routes/admin.js';
+import { adminAuthRouter } from './routes/adminAuth.js';
 import { openFinanceRouter } from './routes/openFinance.js';
 import { invitesRouter } from './routes/invites.js';
 import { membersRouter } from './routes/members.js';
@@ -55,6 +56,7 @@ app.use('/api', openFinanceRouter);
 app.use('/api', invitesRouter);
 app.use('/api', membersRouter);
 app.use('/api/billing', billingRouter);
+app.use('/api/admin/auth', adminAuthRouter);
 app.use('/api/admin', adminRouter);
 
 app.use((_req, res) => {
