@@ -231,6 +231,16 @@ adminRouter.post('/force-plan', async (req, res) => {
   res.json({ ok: true, updated: updated.map((t) => ({ tenantId: t.id, billingPlan: t.billingPlan, giftExpiry: t.giftExpiry })) });
 });
 
+// ── DELETE /admin/delete-tenant ───────────────────────────────────────────────
+adminRouter.delete('/delete-tenant', async (req, res) => {
+  const { tenantId } = req.body as { tenantId: string };
+  if (!tenantId) { res.status(400).json({ error: 'tenantId required' }); return; }
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+  if (!tenant) { res.status(404).json({ error: 'Tenant not found' }); return; }
+  await prisma.tenant.delete({ where: { id: tenantId } });
+  res.json({ ok: true, deleted: tenantId, name: tenant.name });
+});
+
 // ── POST /admin/gift ───────────────────────────────────────────────────────────
 
 adminRouter.post('/gift', async (req, res) => {
