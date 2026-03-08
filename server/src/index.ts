@@ -51,13 +51,13 @@ app.use('/api', healthRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/admin/auth', adminAuthRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/billing', billingRouter);
 app.use('/api', meRouter);
 app.use('/api', transactionsRouter);
 app.use('/api', financeMetaRouter);
 app.use('/api', openFinanceRouter);
 app.use('/api', invitesRouter);
 app.use('/api', membersRouter);
-app.use('/api/billing', billingRouter);
 
 app.use((_req, res) => {
   res.status(404).json({ error: 'Not found' });
