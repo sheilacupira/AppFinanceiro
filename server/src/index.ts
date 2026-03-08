@@ -52,11 +52,11 @@ app.use('/api/auth', authRouter);
 app.use('/api/admin/auth', adminAuthRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/billing', billingRouter);
+app.use('/api', invitesRouter);    // invites/:token é rota pública, deve ficar antes de routers com requireAuth global
 app.use('/api', meRouter);
 app.use('/api', transactionsRouter);
 app.use('/api', financeMetaRouter);
 app.use('/api', openFinanceRouter);
-app.use('/api', invitesRouter);
 app.use('/api', membersRouter);
 
 app.use((_req, res) => {
