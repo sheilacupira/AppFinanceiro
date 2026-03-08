@@ -67,6 +67,7 @@ interface AuthContextType {
   acceptInvite: (token: string) => Promise<{ tenantId: string; tenantName: string }>;
   forgotPassword: (phone: string) => Promise<void>;
   resetPassword: (token: string, password: string) => Promise<void>;
+  refreshSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -348,6 +349,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const refreshSession = useCallback(async () => {
+    const tokens = loadSaasTokens();
+    if (!tokens) return;
+    await resolveSessionFromTokens(tokens);
+  }, [resolveSessionFromTokens]);
+
   const value = useMemo(
     () => ({
       status,
@@ -368,10 +375,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       acceptInvite,
       forgotPassword,
       resetPassword,
+      refreshSession,
     }),
     [status, session, login, register, logout, listProfiles, switchProfile, createProfile, updateTenant,
      listMembers, inviteCollaborator, listPendingInvites, cancelInvite, updateMemberRole, removeMember, acceptInvite,
-     forgotPassword, resetPassword]
+     forgotPassword, resetPassword, refreshSession]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

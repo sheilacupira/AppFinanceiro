@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Moon, Sun, Church, Building2, Users, UserPlus, Copy, Trash2, ShieldCheck } from 'lucide-react';
 import { isSaasMode } from '@/config/runtime';
 import { useAuth, type TenantMember, type PendingInvite } from '@/contexts/AuthContext';
@@ -14,8 +15,9 @@ import { toast } from 'sonner';
 
 export function SettingsPage() {
   const { data, updateSettings } = useFinance();
-  const { session, logout, listProfiles, switchProfile, createProfile, updateTenant,
+  const { session, logout, refreshSession, listProfiles, switchProfile, createProfile, updateTenant,
     listMembers, inviteCollaborator, listPendingInvites, cancelInvite, updateMemberRole, removeMember } = useAuth();
+  const navigate = useNavigate();
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
 
   // Apply saved theme on mount
@@ -524,6 +526,26 @@ export function SettingsPage() {
             <p className="text-xs text-muted-foreground">Organização: {session.tenant.name}</p>
             <p className="text-xs text-muted-foreground">Plano: {activeBillingPlanLabel}</p>
           </div>
+
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => {
+              void refreshSession().then(() => toast.success('Plano atualizado!'));
+            }}
+          >
+            Atualizar plano
+          </Button>
+
+          {session?.user.email === 'sheilacupira@gmail.com' && (
+            <Button
+              variant="outline"
+              className="w-full border-purple-500 text-purple-600 hover:bg-purple-50"
+              onClick={() => navigate('/admin/dashboard')}
+            >
+              🛡️ Painel Admin
+            </Button>
+          )}
 
           <Button variant="outline" className="w-full" onClick={() => void logout()}>
             Sair da conta
