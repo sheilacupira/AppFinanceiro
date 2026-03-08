@@ -17,9 +17,10 @@ import type { Subscription, Invoice, PaymentMethod, PlanId } from '@/types/billi
 
 interface BillingManagerProps {
   userId: string;
+  tenantPlan?: string;
 }
 
-export function BillingManager({ userId }: BillingManagerProps) {
+export function BillingManager({ userId, tenantPlan }: BillingManagerProps) {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
@@ -117,7 +118,10 @@ export function BillingManager({ userId }: BillingManagerProps) {
     }).format(price);
   };
 
-  const currentPlan = subscription ? getPlan(subscription.planId) : getPlan('free');
+  // If no MP subscription but tenant has a gift/paid plan, honour it
+  const effectivePlanId = subscription?.planId ?? (tenantPlan && tenantPlan !== 'free' ? tenantPlan : 'free');
+  const isGiftPlan = !subscription && tenantPlan && tenantPlan !== 'free';
+  const currentPlan = getPlan(effectivePlanId);
   const currentPlanBadgeLabel =
     currentPlan.id === 'free' ? 'Grátis' : currentPlan.id === 'pro' ? 'Pró' : 'Premium';
 
@@ -139,7 +143,7 @@ export function BillingManager({ userId }: BillingManagerProps) {
           </Button>
         </div>
         <SubscriptionPlans
-          currentPlan={subscription?.planId || 'free'}
+          currentPlan={(subscription?.planId || effectivePlanId) as PlanId}
           userId={userId}
           onPlanChanged={handlePlanChanged}
         />
@@ -175,9 +179,11 @@ export function BillingManager({ userId }: BillingManagerProps) {
               </CardTitle>
               <CardDescription>{currentPlan.description}</CardDescription>
             </div>
-            <Button onClick={() => setShowPlans(true)}>
-              {currentPlan.id === 'free' ? 'Fazer Upgrade' : 'Trocar Plano'}
-            </Button>
+            {!isGiftPlan && (
+              <Button onClick={() => setShowPlans(true)}>
+                {currentPlan.id === 'free' ? 'Fazer Upgrade' : 'Trocar Plano'}
+              </Button>
+            )}
           </div>
         </CardHeader>
 
@@ -266,6 +272,12 @@ export function BillingManager({ userId }: BillingManagerProps) {
                 </Alert>
               )}
             </>
+          ) : isGiftPlan ? (
+            <div className="text-center py-6">
+              <CheckCircle2 className="h-8 w-8 text-green-600 mx-auto mb-2" />
+              <p className="font-medium text-green-700">Plano {currentPlanBadgeLabel} ativo</p>
+              <p className="text-sm text-muted-foreground mt-1">Acesso cortesia ativo na sua conta.</p>
+            </div>
           ) : (
             <div className="text-center py-6">
               <p className="text-muted-foreground mb-4">

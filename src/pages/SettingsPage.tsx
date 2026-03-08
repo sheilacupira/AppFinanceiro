@@ -514,7 +514,7 @@ export function SettingsPage() {
       {/* Billing */}
       {isSaasMode && session && (
         <div className="bg-card rounded-lg border border-border p-6">
-          <BillingManager userId={session.user.email} />
+          <BillingManager userId={session.user.email} tenantPlan={session.tenant.billingPlan} />
         </div>
       )}
 
