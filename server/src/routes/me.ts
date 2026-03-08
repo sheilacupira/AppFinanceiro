@@ -187,21 +187,19 @@ meRouter.post('/me/tenants', requireAuth, async (req, res) => {
     return;
   }
 
-  if (parsed.data.profileType === 'business') {
-    const currentTenant = await prisma.tenant.findUnique({
-      where: { id: auth.tenantId },
-      select: { billingPlan: true },
-    });
+  const currentTenant = await prisma.tenant.findUnique({
+    where: { id: auth.tenantId },
+    select: { billingPlan: true, billingStatus: true, giftExpiry: true },
+  });
 
-    if (!currentTenant) {
-      res.status(404).json({ error: 'Current tenant not found' });
-      return;
-    }
+  if (!currentTenant) {
+    res.status(404).json({ error: 'Current tenant not found' });
+    return;
+  }
 
-    if (currentTenant.billingPlan === 'free') {
-      res.status(403).json({ error: 'Perfil PJ disponível apenas para planos pagos' });
-      return;
-    }
+  if (parsed.data.profileType === 'business' && currentTenant.billingPlan === 'free') {
+    res.status(403).json({ error: 'Perfil PJ disponível apenas para planos pagos' });
+    return;
   }
 
   const existingUser = await prisma.user.findUnique({
@@ -221,6 +219,9 @@ meRouter.post('/me/tenants', requireAuth, async (req, res) => {
         cnpj: parsed.data.cnpj ?? null,
         razaoSocial: parsed.data.razaoSocial ?? null,
         ownerId: auth.userId,
+        billingPlan: currentTenant.billingPlan,
+        billingStatus: currentTenant.billingStatus,
+        giftExpiry: currentTenant.giftExpiry,
       },
     });
 
