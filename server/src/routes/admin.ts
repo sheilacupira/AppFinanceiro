@@ -216,17 +216,19 @@ adminRouter.post('/force-plan', async (req, res) => {
   const { email, plan = 'pro' } = req.body as { email: string; plan?: string };
   const user = await prisma.user.findUnique({
     where: { email },
-    include: { memberships: { where: { role: 'OWNER' }, orderBy: { createdAt: 'asc' }, take: 1 } },
+    include: { memberships: { where: { role: 'OWNER' }, orderBy: { createdAt: 'asc' } } },
   });
   if (!user) { res.status(404).json({ error: 'User not found' }); return; }
-  if (!user.memberships[0]) { res.status(404).json({ error: 'No OWNER membership' }); return; }
+  if (!user.memberships.length) { res.status(404).json({ error: 'No OWNER membership' }); return; }
   const giftExpiry = new Date();
   giftExpiry.setFullYear(giftExpiry.getFullYear() + 1);
-  const updated = await prisma.tenant.update({
-    where: { id: user.memberships[0].tenantId },
-    data: { billingPlan: plan, billingStatus: 'gift', giftExpiry },
-  });
-  res.json({ ok: true, tenantId: updated.id, billingPlan: updated.billingPlan, giftExpiry: updated.giftExpiry });
+  const updated = await Promise.all(user.memberships.map((m) =>
+    prisma.tenant.update({
+      where: { id: m.tenantId },
+      data: { billingPlan: plan, billingStatus: 'gift', giftExpiry },
+    })
+  ));
+  res.json({ ok: true, updated: updated.map((t) => ({ tenantId: t.id, billingPlan: t.billingPlan, giftExpiry: t.giftExpiry })) });
 });
 
 // ── POST /admin/gift ───────────────────────────────────────────────────────────
