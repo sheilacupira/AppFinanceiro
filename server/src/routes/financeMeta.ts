@@ -148,6 +148,22 @@ financeMetaRouter.put('/recurrences/:id', async (req, res) => {
     return;
   }
 
+  // Enforce free plan limit: 5 recurrences
+  const existingRec = await prisma.financeRecurrence.findUnique({
+    where: { tenantId_id: { tenantId: auth.tenantId, id: payload.id } },
+    select: { id: true },
+  });
+  if (!existingRec) {
+    const tenant = await prisma.tenant.findUnique({ where: { id: auth.tenantId }, select: { billingPlan: true } });
+    if (tenant?.billingPlan === 'free') {
+      const count = await prisma.financeRecurrence.count({ where: { tenantId: auth.tenantId } });
+      if (count >= 5) {
+        res.status(403).json({ error: 'Limite de 5 lançamentos recorrentes atingido. Faça upgrade para o plano Pró.' });
+        return;
+      }
+    }
+  }
+
   const saved = await prisma.financeRecurrence.upsert({
     where: {
       tenantId_id: {
@@ -234,6 +250,22 @@ financeMetaRouter.put('/categories/:id', async (req, res) => {
   if (payload.id !== req.params.id) {
     res.status(400).json({ error: 'Route id must match body id' });
     return;
+  }
+
+  // Enforce free plan limit: 9 categories
+  const existingCat = await prisma.financeCategory.findUnique({
+    where: { tenantId_id: { tenantId: auth.tenantId, id: payload.id } },
+    select: { id: true },
+  });
+  if (!existingCat) {
+    const tenant = await prisma.tenant.findUnique({ where: { id: auth.tenantId }, select: { billingPlan: true } });
+    if (tenant?.billingPlan === 'free') {
+      const count = await prisma.financeCategory.count({ where: { tenantId: auth.tenantId } });
+      if (count >= 9) {
+        res.status(403).json({ error: 'Limite de 9 categorias atingido. Faça upgrade para o plano Pró.' });
+        return;
+      }
+    }
   }
 
   const saved = await prisma.financeCategory.upsert({

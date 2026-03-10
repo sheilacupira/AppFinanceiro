@@ -90,6 +90,27 @@ transactionsRouter.put('/transactions/:id', async (req, res) => {
     return;
   }
 
+  // Enforce free plan limit: 100 transactions/month
+  const existingTx = await prisma.financeTransaction.findUnique({
+    where: { tenantId_id: { tenantId: auth.tenantId, id: payload.id } },
+    select: { id: true },
+  });
+  if (!existingTx) {
+    const tenant = await prisma.tenant.findUnique({ where: { id: auth.tenantId }, select: { billingPlan: true } });
+    if (tenant?.billingPlan === 'free') {
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      const count = await prisma.financeTransaction.count({
+        where: { tenantId: auth.tenantId, date: { gte: startOfMonth, lte: endOfMonth } },
+      });
+      if (count >= 100) {
+        res.status(403).json({ error: 'Limite de 100 transações/mês atingido. Faça upgrade para o plano Pró.' });
+        return;
+      }
+    }
+  }
+
   const saved = await prisma.financeTransaction.upsert({
     where: {
       tenantId_id: {
