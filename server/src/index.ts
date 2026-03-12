@@ -9,7 +9,7 @@ import { financeMetaRouter } from './routes/financeMeta.js';
 import { billingRouter, handleMPWebhook } from './routes/billing.js';
 import { adminRouter } from './routes/admin.js';
 import { adminAuthRouter } from './routes/adminAuth.js';
-import { openFinanceRouter } from './routes/openFinance.js'; // v2 - status route is public
+import { openFinanceRouter, handleOpenFinanceStatus } from './routes/openFinance.js'; // v3 - status is public
 import { invitesRouter } from './routes/invites.js';
 import { membersRouter } from './routes/members.js';
 
@@ -53,6 +53,7 @@ app.use('/api/admin/auth', adminAuthRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/billing', billingRouter);
 app.use('/api', invitesRouter);    // invites/:token é rota pública, deve ficar antes de routers com requireAuth global
+app.get('/api/open-finance/status', (req, res) => { void handleOpenFinanceStatus(req, res); }); // pública, sem auth
 app.use('/api', meRouter);
 app.use('/api', transactionsRouter);
 app.use('/api', financeMetaRouter);

@@ -4,6 +4,13 @@ import { env } from '../config/env.js';
 import { openFinanceClient } from '../lib/openFinance.js';
 import { requireAuth } from '../middleware/auth.js';
 
+// Rota pública exportada separadamente para ser montada sem auth no app
+export async function handleOpenFinanceStatus(_req: import('express').Request, res: import('express').Response): Promise<void> {
+  const configured = Boolean(env.PLUGGY_CLIENT_ID && env.PLUGGY_CLIENT_SECRET);
+  const enabled = configured ? await openFinanceClient.isAvailable() : false;
+  res.json({ enabled });
+}
+
 export const openFinanceRouter = Router();
 
 const itemIdSchema = z.object({
@@ -14,16 +21,6 @@ const transactionQuerySchema = z.object({
   accountId: z.string().min(1),
   from: z.string().optional(),
   to: z.string().optional(),
-});
-
-// Rota pública — apenas verifica se Pluggy está configurado, sem dados sensíveis
-openFinanceRouter.get('/open-finance/status', async (_req, res) => {
-  const configured = Boolean(env.PLUGGY_CLIENT_ID && env.PLUGGY_CLIENT_SECRET);
-  const enabled = configured ? await openFinanceClient.isAvailable() : false;
-
-  res.json({
-    enabled,
-  });
 });
 
 openFinanceRouter.use(requireAuth);
