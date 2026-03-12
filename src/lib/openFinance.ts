@@ -28,14 +28,9 @@ class OpenFinanceService {
   async initialize(accessToken?: string): Promise<void> {
     this.accessToken = accessToken ?? null;
 
-    // Always check backend status — the /api/open-finance/status endpoint is public
-    // and does not require authentication. Previously this returned early when there
-    // was no accessToken, keeping mockMode = true even when Pluggy is fully configured.
+    // /api/open-finance/status é público — chama sempre, com ou sem token
     try {
-      const status = await apiRequest<{ enabled: boolean }>('/api/open-finance/status', {
-        token: this.accessToken ?? undefined,
-      });
-
+      const status = await apiRequest<{ enabled: boolean }>('/api/open-finance/status');
       this.mockMode = !status.enabled;
     } catch (error) {
       this.mockMode = true;

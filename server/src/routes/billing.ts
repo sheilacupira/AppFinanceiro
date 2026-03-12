@@ -86,7 +86,12 @@ billingRouter.post('/checkout', requireAuth, async (req, res) => {
     return;
   }
 
+  const webhookBase = env.APP_URL.replace(/\/$/, '').includes('localhost')
+    ? 'https://appfinanceiro-production-eb56.up.railway.app'
+    : env.APP_URL.replace(/\/$/, '');
+
   const result = await mp.create({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     body: {
       reason: planCfg.reason,
       auto_recurring: {
@@ -96,10 +101,10 @@ billingRouter.post('/checkout', requireAuth, async (req, res) => {
         currency_id: 'BRL',
       },
       back_url: successUrl,
-      notification_url: `${env.APP_URL.replace(/\/$/, '').includes('localhost') ? 'https://appfinanceiro-production-eb56.up.railway.app' : env.APP_URL.replace(/\/$/, '')}/api/billing/webhook`,
+      notification_url: `${webhookBase}/api/billing/webhook`,
       payer_email: payerEmail,
       external_reference: JSON.stringify({ tenantId: auth.tenantId, planId, interval }),
-    },
+    } as never,
   });
 
   res.json({
