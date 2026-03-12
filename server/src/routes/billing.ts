@@ -96,7 +96,7 @@ billingRouter.post('/checkout', requireAuth, async (req, res) => {
         currency_id: 'BRL',
       },
       back_url: successUrl,
-      notification_url: `${env.APP_URL}/api/billing/webhook`,
+      notification_url: `${env.APP_URL.replace(/\/$/, '').includes('localhost') ? 'https://appfinanceiro-production-eb56.up.railway.app' : env.APP_URL.replace(/\/$/, '')}/api/billing/webhook`,
       payer_email: payerEmail,
       external_reference: JSON.stringify({ tenantId: auth.tenantId, planId, interval }),
     },
