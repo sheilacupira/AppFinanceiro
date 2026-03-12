@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { fetchDashboard, type DashboardData } from '@/lib/adminService';
+import { useNavigate } from 'react-router-dom';
+import { fetchDashboard, clearAdminToken, type DashboardData } from '@/lib/adminService';
 
 function StatCard({ label, value, sub, color }: { label: string; value: string | number; sub?: string; color?: string }) {
   return (
@@ -14,12 +15,20 @@ function StatCard({ label, value, sub, color }: { label: string; value: string |
 export default function AdminDashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchDashboard()
       .then(setData)
-      .catch((e) => setError(e.message));
-  }, []);
+      .catch((e: Error) => {
+        if (e.message.includes('401') || e.message.toLowerCase().includes('token') || e.message.includes('negado')) {
+          clearAdminToken();
+          navigate('/admin');
+        } else {
+          setError(e.message);
+        }
+      });
+  }, [navigate]);
 
   if (error) return <div className="p-8 text-red-400">{error}</div>;
   if (!data) return <div className="p-8 text-gray-400">Carregando...</div>;

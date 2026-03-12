@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   fetchAffiliates,
   createAffiliate,
   updateAffiliate,
   fetchReferrals,
   updateReferral,
+  clearAdminToken,
   type Affiliate,
   type AffiliateReferral,
 } from '@/lib/adminService';
@@ -40,6 +42,7 @@ export default function AdminAffiliatesPage() {
     name: '', email: '', code: '', commissionRate: 0.20, notes: '',
   });
   const [saving, setSaving] = useState(false);
+  const navigate = useNavigate();
 
   function showToast(msg: string) {
     setToast(msg);
@@ -51,7 +54,14 @@ export default function AdminAffiliatesPage() {
       const data = await fetchAffiliates();
       setAffiliates(data);
     } catch (e: unknown) {
-      if (e instanceof Error) showToast(e.message);
+      if (e instanceof Error) {
+        if (e.message.includes('401') || e.message.toLowerCase().includes('token') || e.message.includes('negado')) {
+          clearAdminToken();
+          navigate('/admin');
+        } else {
+          showToast(e.message);
+        }
+      }
     }
   }
 

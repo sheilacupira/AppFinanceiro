@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
-import { fetchUsers, giftUser, revokeUser, blockUser, type AdminUser } from '@/lib/adminService';
+import { useNavigate } from 'react-router-dom';
+import { fetchUsers, giftUser, revokeUser, blockUser, clearAdminToken, type AdminUser } from '@/lib/adminService';
 
 const PLAN_COLORS: Record<string, string> = {
   free: 'bg-gray-700 text-gray-300',
@@ -73,6 +74,7 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(false);
   const [giftTarget, setGiftTarget] = useState<AdminUser | null>(null);
   const [toast, setToast] = useState('');
+  const navigate = useNavigate();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -82,11 +84,18 @@ export default function AdminUsersPage() {
       setTotal(res.total);
       setPages(res.pages);
     } catch (e: unknown) {
-      if (e instanceof Error) showToast(e.message);
+      if (e instanceof Error) {
+        if (e.message.includes('401') || e.message.toLowerCase().includes('token') || e.message.includes('negado')) {
+          clearAdminToken();
+          navigate('/admin');
+        } else {
+          showToast(e.message);
+        }
+      }
     } finally {
       setLoading(false);
     }
-  }, [search, planFilter, statusFilter, page]);
+  }, [search, planFilter, statusFilter, page, navigate]);
 
   useEffect(() => { load(); }, [load]);
 

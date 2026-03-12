@@ -547,7 +547,7 @@ export function SettingsPage() {
             <Button
               variant="outline"
               className="w-full border-purple-500 text-purple-600 hover:bg-purple-50"
-              onClick={() => navigate('/admin/dashboard')}
+              onClick={() => navigate('/admin')}
             >
               🛡️ Painel Admin
             </Button>
