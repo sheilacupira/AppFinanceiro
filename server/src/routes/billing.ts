@@ -270,27 +270,31 @@ billingRouter.get('/invoices', requireAuth, async (req, res) => {
   const payment = getPayment();
   if (!payment) { res.json([]); return; }
 
-  const results = await payment.search({
-    options: {
-      preapproval_id: tenant.mpSubscriptionId,
-      limit: 12,
-    },
-  });
+  try {
+    const results = await payment.search({
+      options: {
+        preapproval_id: tenant.mpSubscriptionId,
+        limit: 12,
+      },
+    });
 
-  const payments = results.results ?? [];
+    const payments = results.results ?? [];
 
-  res.json(
-    payments.map((p) => ({
-      id: String(p.id),
-      subscriptionId: tenant.mpSubscriptionId,
-      amount: p.transaction_amount ?? 0,
-      status: p.status ?? 'pending',
-      createdAt: p.date_created ? new Date(p.date_created) : new Date(),
-      paidAt: p.date_approved ? new Date(p.date_approved) : undefined,
-      invoiceUrl: undefined,
-      receiptUrl: undefined,
-    })),
-  );
+    res.json(
+      payments.map((p) => ({
+        id: String(p.id),
+        subscriptionId: tenant.mpSubscriptionId,
+        amount: p.transaction_amount ?? 0,
+        status: p.status ?? 'pending',
+        createdAt: p.date_created ? new Date(p.date_created) : new Date(),
+        paidAt: p.date_approved ? new Date(p.date_approved) : undefined,
+        invoiceUrl: undefined,
+        receiptUrl: undefined,
+      })),
+    );
+  } catch {
+    res.json([]);
+  }
 });
 
 // ── GET /payment-methods ───────────────────────────────────────────────────────
