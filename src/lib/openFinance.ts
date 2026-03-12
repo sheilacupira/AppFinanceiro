@@ -53,7 +53,6 @@ class OpenFinanceService {
       });
       return data.accessToken;
     } catch (error) {
-      this.mockMode = true;
       console.error('Erro ao gerar connect token:', error);
       throw error;
     }
@@ -89,7 +88,8 @@ class OpenFinanceService {
         type: 'PERSONAL_BANK',
       }));
     } catch (error) {
-      this.mockMode = true;
+      // Não altera mockMode aqui — o status do Pluggy é determinado apenas em initialize().
+      // Um erro ao listar conectores pode ser temporário; não deve silenciar o Open Finance.
       console.error('Erro ao listar bancos:', error);
       return this.getMockBanks();
     }
