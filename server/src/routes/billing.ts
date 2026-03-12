@@ -117,6 +117,8 @@ billingRouter.get('/subscription', requireAuth, async (req, res) => {
 
   const tenant = await prisma.tenant.findUnique({ where: { id: auth.tenantId } });
   if (!tenant?.mpSubscriptionId) { res.json(null); return; }
+  // Gift plans don't expose MP subscription details — show courtesy display instead
+  if (tenant.billingStatus === 'gift') { res.json(null); return; }
 
   const mp = getPreApproval();
   if (!mp) { res.json(null); return; }

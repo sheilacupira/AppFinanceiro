@@ -225,7 +225,7 @@ adminRouter.post('/force-plan', async (req, res) => {
   const updated = await Promise.all(user.memberships.map((m) =>
     prisma.tenant.update({
       where: { id: m.tenantId },
-      data: { billingPlan: plan, billingStatus: 'gift', giftExpiry },
+      data: { billingPlan: plan, billingStatus: 'gift', giftExpiry, mpSubscriptionId: null },
     })
   ));
   res.json({ ok: true, updated: updated.map((t) => ({ tenantId: t.id, billingPlan: t.billingPlan, giftExpiry: t.giftExpiry })) });
