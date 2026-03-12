@@ -322,17 +322,17 @@ export function BankConnectionManager() {
       {!loading && openFinanceService.isMockMode() && (
         <Alert className="border-yellow-300 bg-yellow-50 dark:bg-yellow-950 dark:border-yellow-800">
           <WifiOff className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-          <AlertDescription className="text-yellow-700 dark:text-yellow-300 text-sm">
-            <strong>Modo demonstração</strong> — credenciais Pluggy não configuradas.{' '}
-            Para conectar contas reais, adicione{' '}
-            <code className="font-mono text-xs bg-yellow-100 dark:bg-yellow-900 px-1 rounded">
-              PLUGGY_CLIENT_ID
-            </code>{' '}
-            e{' '}
-            <code className="font-mono text-xs bg-yellow-100 dark:bg-yellow-900 px-1 rounded">
-              PLUGGY_CLIENT_SECRET
-            </code>{' '}
-            no <code className="font-mono text-xs">.env</code> do backend.
+          <AlertDescription className="text-yellow-700 dark:text-yellow-300 text-sm flex items-center justify-between gap-2">
+            <span>
+              <strong>Modo demonstração</strong> — conexão com bancos reais temporariamente indisponível.
+              Os dados mostrados são exemplos.
+            </span>
+            <button
+              onClick={() => { void loadData(); }}
+              className="shrink-0 text-xs underline hover:no-underline"
+            >
+              Tentar novamente
+            </button>
           </AlertDescription>
         </Alert>
       )}
