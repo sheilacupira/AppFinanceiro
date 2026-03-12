@@ -84,9 +84,9 @@ adminRouter.get('/dashboard', async (_req, res) => {
     prisma.user.count(),
     prisma.user.count({ where: { createdAt: { gte: startOfMonth } } }),
     prisma.user.count({ where: { createdAt: { gte: startOfLastMonth, lte: endOfLastMonth } } }),
-    prisma.tenant.count({ where: { billingPlan: 'pro', billingStatus: { not: null } } }),
-    prisma.tenant.count({ where: { billingPlan: 'enterprise', billingStatus: { not: null } } }),
-    prisma.tenant.count({ where: { billingStatus: 'gift', giftExpiry: { gt: now } } }),
+    prisma.user.count({ where: { memberships: { some: { role: 'OWNER', tenant: { billingPlan: 'pro', billingStatus: { not: null } } } } } }),
+    prisma.user.count({ where: { memberships: { some: { role: 'OWNER', tenant: { billingPlan: 'enterprise', billingStatus: { not: null } } } } } }),
+    prisma.user.count({ where: { memberships: { some: { role: 'OWNER', tenant: { billingStatus: 'gift', giftExpiry: { gt: now } } } } } }),
     prisma.user.count({ where: { isBlocked: true } }),
     prisma.affiliate.count({ where: { status: 'active' } }),
     prisma.affiliateReferral.aggregate({

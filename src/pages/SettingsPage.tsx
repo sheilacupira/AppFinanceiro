@@ -20,6 +20,12 @@ export function SettingsPage() {
   const navigate = useNavigate();
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
 
+  // Auto-refresh session on mount to reflect latest plan
+  useEffect(() => {
+    void refreshSession();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Apply saved theme on mount
   useEffect(() => {
     const savedTheme = data.settings.theme;
