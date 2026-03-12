@@ -365,17 +365,33 @@ export const handleMPWebhook = async (req: express.Request, res: express.Respons
           const billingStatus = mpStatusToBillingStatus(sub.status ?? 'pending');
 
           if (tenantId) {
-            await prisma.tenant.update({
+            // Never overwrite a gift plan with a payment-flow status (e.g. pending → incomplete)
+            const currentTenant = await prisma.tenant.findUnique({
               where: { id: tenantId },
-              data: {
-                mpSubscriptionId: sub.id,
-                billingStatus,
-                ...(planId === 'pro' || planId === 'enterprise' ? { billingPlan: planId } : {}),
-              },
+              select: { billingStatus: true },
             });
+            const isGift = currentTenant?.billingStatus === 'gift';
+
+            if (!isGift) {
+              await prisma.tenant.update({
+                where: { id: tenantId },
+                data: {
+                  mpSubscriptionId: sub.id,
+                  billingStatus,
+                  ...(planId === 'pro' || planId === 'enterprise' ? { billingPlan: planId } : {}),
+                },
+              });
+            } else {
+              // For gift tenants, only update mpSubscriptionId; never change billingStatus
+              await prisma.tenant.update({
+                where: { id: tenantId },
+                data: { mpSubscriptionId: sub.id },
+              });
+            }
           } else {
+            // Only update tenants that are NOT on gift plan
             await prisma.tenant.updateMany({
-              where: { mpSubscriptionId: sub.id },
+              where: { mpSubscriptionId: sub.id, billingStatus: { not: 'gift' } },
               data: { billingStatus },
             });
           }
