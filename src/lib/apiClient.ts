@@ -1,16 +1,24 @@
 import { runtimeConfig } from '@/config/runtime';
 
 const DEFAULT_API_BASE_URL = 'http://localhost:4000';
+const PRODUCTION_API_URL = 'https://appfinanceiro-production-eb56.up.railway.app';
 
 const normalizeBaseUrl = (baseUrl: string): string => {
   return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
 };
 
 const getApiBaseUrl = (): string => {
+  // 1. Env var explícita (máxima prioridade)
   if (runtimeConfig.apiBaseUrl) {
     return normalizeBaseUrl(runtimeConfig.apiBaseUrl);
   }
 
+  // 2. Se rodando no browser fora de localhost → produção no Railway
+  if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
+    return PRODUCTION_API_URL;
+  }
+
+  // 3. Desenvolvimento local
   return DEFAULT_API_BASE_URL;
 };
 
