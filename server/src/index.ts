@@ -9,7 +9,7 @@ import { financeMetaRouter } from './routes/financeMeta.js';
 import { billingRouter, handleMPWebhook } from './routes/billing.js';
 import { adminRouter } from './routes/admin.js';
 import { adminAuthRouter } from './routes/adminAuth.js';
-import { openFinanceRouter } from './routes/openFinance.js';
+import { openFinanceRouter } from './routes/openFinance.js'; // v2 - status route is public
 import { invitesRouter } from './routes/invites.js';
 import { membersRouter } from './routes/members.js';
 

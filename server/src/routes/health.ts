@@ -7,5 +7,6 @@ healthRouter.get('/health', (_req, res) => {
     status: 'ok',
     service: 'appfinanceiro-server',
     timestamp: new Date().toISOString(),
+    build: 'v3-open-finance-public',
   });
 });
