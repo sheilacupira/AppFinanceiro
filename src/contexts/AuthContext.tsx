@@ -65,7 +65,7 @@ interface AuthContextType {
   updateMemberRole: (userId: string, role: 'ADMIN' | 'MEMBER') => Promise<void>;
   removeMember: (userId: string) => Promise<void>;
   acceptInvite: (token: string) => Promise<{ tenantId: string; tenantName: string }>;
-  forgotPassword: (email: string) => Promise<void>;
+  forgotPassword: (phone: string) => Promise<void>;
   resetPassword: (token: string, password: string) => Promise<void>;
   refreshSession: () => Promise<void>;
 }
@@ -335,10 +335,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { tenantId: res.tenantId, tenantName: res.tenantName };
   }, []);
 
-  const forgotPassword = useCallback(async (email: string) => {
+  const forgotPassword = useCallback(async (phone: string) => {
     await apiRequest<{ message: string }>('/api/auth/forgot-password', {
       method: 'POST',
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ phone }),
     });
   }, []);
 
