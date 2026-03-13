@@ -346,9 +346,9 @@ export function AuthPage() {
 
       <p className="mt-6 text-xs text-muted-foreground text-center max-w-sm">
         Ao criar uma conta você concorda com nossos{' '}
-        <a href="#" className="underline hover:text-foreground">Termos de Uso</a>
+        <a href="/terms" className="underline hover:text-foreground">Termos de Uso</a>
         {' '}e{' '}
-        <a href="#" className="underline hover:text-foreground">Política de Privacidade</a>.
+        <a href="/privacy" className="underline hover:text-foreground">Política de Privacidade</a>.
       </p>
     </div>
   );

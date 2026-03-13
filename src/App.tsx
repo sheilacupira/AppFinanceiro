@@ -13,8 +13,8 @@ import AdminLoginPage from "./pages/admin/AdminLoginPage";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
-import AdminAffiliatesPage from "./pages/admin/AdminAffiliatesPage";
-
+import AdminAffiliatesPage from "./pages/admin/AdminAffiliatesPage";import TermsPage from './pages/TermsPage';
+import PrivacyPage from './pages/PrivacyPage';
 interface ErrorBoundaryState { hasError: boolean; message: string }
 
 class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryState> {
@@ -65,6 +65,8 @@ const App = () => (
                 <Route path="users" element={<AdminUsersPage />} />
                 <Route path="affiliates" element={<AdminAffiliatesPage />} />
               </Route>
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
