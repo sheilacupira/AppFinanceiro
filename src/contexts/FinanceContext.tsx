@@ -93,7 +93,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       
       // Create fresh empty data
       const freshData = {
-        schemaVersion: 1,
+        schemaVersion: 2,
         transactions: [],
         recurrences: [],
         categories: [
@@ -187,11 +187,39 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           ),
         ]);
 
+        // Categorias obrigatórias que sempre devem existir (independente do servidor)
+        const REQUIRED_CATEGORIES: Category[] = [
+          { id: 'salary',       name: 'Salário',           type: 'income',  icon: '💼' },
+          { id: 'freelance',    name: 'Freelance',         type: 'income',  icon: '💻' },
+          { id: 'investment',   name: 'Investimentos',     type: 'income',  icon: '📈' },
+          { id: 'other-income', name: 'Outros (Entrada)',  type: 'income',  icon: '💰' },
+          { id: 'tithe',        name: 'Dízimo',            type: 'expense', icon: '⛪' },
+          { id: 'housing',      name: 'Moradia',           type: 'expense', icon: '🏠' },
+          { id: 'food',         name: 'Alimentação',       type: 'expense', icon: '🍽️' },
+          { id: 'transport',    name: 'Transporte',        type: 'expense', icon: '🚗' },
+          { id: 'health',       name: 'Saúde',             type: 'expense', icon: '🏥' },
+          { id: 'education',    name: 'Educação',          type: 'expense', icon: '📚' },
+          { id: 'entertainment',name: 'Lazer',             type: 'expense', icon: '🎬' },
+          { id: 'shopping',     name: 'Compras',           type: 'expense', icon: '🛍️' },
+          { id: 'bills',        name: 'Contas',            type: 'expense', icon: '📄' },
+          { id: 'credit-card',  name: 'Cartão de Crédito', type: 'expense', icon: '💳' },
+          { id: 'financing',    name: 'Financiamento',     type: 'expense', icon: '🏗️' },
+          { id: 'consortium',   name: 'Consórcio',         type: 'expense', icon: '🏦' },
+          { id: 'other-expense',name: 'Outros (Saída)',    type: 'expense', icon: '💸' },
+        ];
+
+        const serverCategories = syncedMeta.categories || localData.categories;
+        const serverIds = new Set(serverCategories.map((c: Category) => c.id));
+        const mergedCategories = [
+          ...serverCategories,
+          ...REQUIRED_CATEGORIES.filter((c) => !serverIds.has(c.id)),
+        ];
+
         saveData({
           ...localData,
           transactions: syncedTransactions,
           recurrences: syncedMeta.recurrences || [],
-          categories: syncedMeta.categories || localData.categories,
+          categories: mergedCategories,
           settings: syncedMeta.settings ?? localData.settings,
         });
 
