@@ -49,6 +49,12 @@ export function SubscriptionPlans({
   const handleSelectPlan = async (planId: PlanId) => {
     if (planId === 'free') return;
 
+    // Enterprise: redirecionar para contato
+    if (planId === 'enterprise') {
+      window.location.href = 'mailto:contato@appfinanceiro.com?subject=Plano%20Premium&body=Ol%C3%A1%2C%20tenho%20interesse%20no%20plano%20Premium.';
+      return;
+    }
+
     setLoading(planId);
     try {
       await billingService.initialize();
@@ -206,6 +212,8 @@ export function SubscriptionPlans({
                     'Plano Atual'
                   ) : plan.id === 'free' ? (
                     'Plano Gratuito'
+                  ) : plan.id === 'enterprise' ? (
+                    'Falar com vendas'
                   ) : (
                     'Fazer Upgrade'
                   )}

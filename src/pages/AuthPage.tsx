@@ -42,7 +42,7 @@ export function AuthPage() {
     if (mode === 'register') {
       if (form.fullName.trim().length < 2) next.fullName = 'Informe seu nome completo';
       if (form.tenantName.trim().length < 2) next.tenantName = 'Informe um nome para a conta';
-      if (!isValidPhone(form.phone)) next.phone = 'WhatsApp inválido (ex: 11999999999)';
+      if (form.phone.trim() && !isValidPhone(form.phone)) next.phone = 'WhatsApp inválido (ex: 11999999999)';
       if (form.password !== form.confirmPassword) next.confirmPassword = 'As senhas não correspondem';
     }
     setErrors(next);
@@ -78,17 +78,17 @@ export function AuthPage() {
 
   const handleForgotPassword = async (e: FormEvent) => {
     e.preventDefault();
-    if (!isValidPhone(form.phone)) {
-      setErrors({ phone: 'Digite um número de WhatsApp válido' });
+    if (!isValidEmail(form.email.trim())) {
+      setErrors({ email: 'Digite um e-mail válido' });
       return;
     }
     setLoading(true);
     try {
-      await forgotPassword(form.phone.trim());
-      toast.success('Se este número estiver cadastrado, você receberá o link no WhatsApp em breve.');
+      await forgotPassword(form.email.trim().toLowerCase());
+      toast.success('Se este e-mail estiver cadastrado, você receberá o link em breve.');
       setMode('login');
     } catch {
-      toast.success('Se este número estiver cadastrado, você receberá o link no WhatsApp em breve.');
+      toast.success('Se este e-mail estiver cadastrado, você receberá o link em breve.');
       setMode('login');
     } finally {
       setLoading(false);
@@ -105,7 +105,7 @@ export function AuthPage() {
   const subtitles: Record<Mode, string> = {
     login: 'Entre para acessar seus dados financeiros',
     register: 'Preencha os dados abaixo para começar',
-    forgot: 'Informe seu número de WhatsApp e enviaremos o link de recuperação',
+    forgot: 'Informe seu e-mail e enviaremos o link de recuperação',
   };
 
   const PasswordToggle = ({ show, onToggle }: { show: boolean; onToggle: () => void }) => (
@@ -240,7 +240,7 @@ export function AuthPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="reg-phone">WhatsApp <span className="text-muted-foreground font-normal">(para recuperação de senha)</span></Label>
+              <Label htmlFor="reg-phone">WhatsApp <span className="text-muted-foreground font-normal">(opcional)</span></Label>
               <Input
                 id="reg-phone"
                 type="tel"
@@ -308,23 +308,23 @@ export function AuthPage() {
         {mode === 'forgot' && (
           <form onSubmit={handleForgotPassword} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="forgot-phone">Número de WhatsApp</Label>
+              <Label htmlFor="forgot-email">E-mail</Label>
               <Input
-                id="forgot-phone"
-                type="tel"
-                placeholder="11999999999"
-                autoComplete="tel"
-                value={form.phone}
-                onChange={set('phone')}
-                className={cn(errors.phone && 'border-destructive')}
+                id="forgot-email"
+                type="email"
+                placeholder="seu@email.com"
+                autoComplete="email"
+                value={form.email}
+                onChange={set('email')}
+                className={cn(errors.email && 'border-destructive')}
                 disabled={loading}
               />
-              {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
+              {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-              {loading ? 'Enviando...' : 'Enviar link pelo WhatsApp'}
+              {loading ? 'Enviando...' : 'Enviar link de recuperação'}
             </Button>
 
             <p className="text-center text-sm text-muted-foreground">

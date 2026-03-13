@@ -3,7 +3,7 @@ import { runtimeConfig } from '@/config/runtime';
 
 const planEntitlements: Record<PlanCode, FeatureEntitlements> = {
   free: {
-    canImportStatement: false,
+    canImportStatement: true,
     canSyncMultiDevice: false,
     canUseAdvancedReports: false,
   },

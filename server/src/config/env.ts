@@ -20,6 +20,12 @@ const envSchema = z.object({
   PLUGGY_CLIENT_SECRET: z.string().optional(),
   // URL pública do app (usada para montar o link de reset)
   APP_URL: z.string().default('http://localhost:8080'),
+  // SMTP (opcional — se não configurado, link é logado no console)
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().default(587),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().optional(),
   // Admin
   ADMIN_EMAIL: z.string().email().default('sheilacupira@gmail.com'),
   ADMIN_SECRET: z.string().min(8).default('change-me-in-production'),

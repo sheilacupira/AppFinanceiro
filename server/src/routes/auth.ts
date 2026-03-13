@@ -11,6 +11,7 @@ import {
 } from '../lib/jwt.js';
 import { env } from '../config/env.js';
 import { sendWhatsApp, buildPasswordResetWhatsApp } from '../lib/whatsapp.js';
+import { sendPasswordResetEmail } from '../lib/mailer.js';
 
 export const authRouter = Router();
 
@@ -293,7 +294,7 @@ authRouter.post('/logout', async (req, res) => {
 // ─── Recuperação de senha ─────────────────────────────────────────────────────
 
 const forgotPasswordSchema = z.object({
-  phone: z.string().min(10),
+  email: z.string().email(),
 });
 
 const resetPasswordSchema = z.object({
@@ -308,11 +309,10 @@ authRouter.post('/forgot-password', async (req, res) => {
     return;
   }
 
-  const phone = parsed.data.phone.replace(/\D/g, '');
-  const phoneWithCountry = phone.length === 10 || phone.length === 11 ? `55${phone}` : phone;
+  const email = parsed.data.email.trim().toLowerCase();
 
-  // Sempre retorna 200 para não expor se o número existe
-  const user = await prisma.user.findFirst({ where: { phone: { in: [phone, phoneWithCountry] } } });
+  // Sempre retorna 200 para não expor se o email existe
+  const user = await prisma.user.findUnique({ where: { email } });
 
   if (user) {
     // Invalida tokens anteriores não utilizados
@@ -327,13 +327,24 @@ authRouter.post('/forgot-password', async (req, res) => {
       data: { userId: user.id, expiresAt },
     });
 
-    const resetUrl = `${env.APP_URL}/reset-password/${resetToken.token}`;
-    const message = buildPasswordResetWhatsApp(resetUrl, user.fullName);
+    const baseUrl = env.APP_URL.startsWith('http://localhost')
+      ? 'https://app-financeiro-neon.vercel.app'
+      : env.APP_URL;
+    const resetUrl = `${baseUrl}/reset-password/${resetToken.token}`;
 
-    await sendWhatsApp(phoneWithCountry, message);
+    // Envia por email (com fallback para log no console se SMTP não configurado)
+    await sendPasswordResetEmail(email, user.fullName, resetUrl);
+
+    // Também tenta enviar por WhatsApp se o usuário tiver telefone
+    if (user.phone) {
+      const phone = user.phone.replace(/\D/g, '');
+      const phoneWithCountry = phone.length === 10 || phone.length === 11 ? `55${phone}` : phone;
+      const message = buildPasswordResetWhatsApp(resetUrl, user.fullName);
+      await sendWhatsApp(phoneWithCountry, message).catch(() => { /* silencia erros do WhatsApp */ });
+    }
   }
 
-  res.json({ message: 'Se este número estiver cadastrado, você receberá o link no WhatsApp em breve.' });
+  res.json({ message: 'Se este e-mail estiver cadastrado, você receberá o link de recuperação em breve.' });
 });
 
 authRouter.post('/reset-password', async (req, res) => {
