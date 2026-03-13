@@ -25,7 +25,7 @@ const envSchema = z.object({
   SMTP_PORT: z.coerce.number().int().default(587),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
-  SMTP_FROM: z.string().optional(),
+  SMTP_FROM: z.string().default('no-reply@appfinanceiro.app'),
   // Admin
   ADMIN_EMAIL: z.string().email().default('sheilacupira@gmail.com'),
   ADMIN_SECRET: z.string().min(8).default('change-me-in-production'),

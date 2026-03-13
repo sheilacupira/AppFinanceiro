@@ -28,13 +28,12 @@ export function AuthPage() {
   const [errors, setErrors] = useState<Partial<typeof form>>({});
 
   const set = (field: keyof typeof form) => (e: ChangeEvent<HTMLInputElement>) => {
-    const value = (field === 'phone') ? e.target.value.replace(/\D/g, '').slice(0, 11) : e.target.value;
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setForm((prev) => ({ ...prev, [field]: e.target.value }));
     setErrors((prev) => ({ ...prev, [field]: '' }));
   };
 
   const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  const isValidPhone = (phone: string) => phone.replace(/\D/g, '').length === 11;
+  const isValidPhone = (phone: string) => /^\+?[0-9]{10,15}$/.test(phone.replace(/[\s\-().]/g, ''));
 
   const validate = (): boolean => {
     const next: Partial<typeof form> = {};
@@ -43,7 +42,7 @@ export function AuthPage() {
     if (mode === 'register') {
       if (form.fullName.trim().length < 2) next.fullName = 'Informe seu nome completo';
       if (form.tenantName.trim().length < 2) next.tenantName = 'Informe um nome para a conta';
-      if (form.phone.trim() && !isValidPhone(form.phone)) next.phone = 'WhatsApp deve ter 11 dígitos (DDD + número)';
+      if (!isValidPhone(form.phone)) next.phone = 'WhatsApp inválido (ex: 11999999999)';
       if (form.password !== form.confirmPassword) next.confirmPassword = 'As senhas não correspondem';
     }
     setErrors(next);
@@ -80,7 +79,7 @@ export function AuthPage() {
   const handleForgotPassword = async (e: FormEvent) => {
     e.preventDefault();
     if (!isValidPhone(form.phone)) {
-      setErrors({ phone: 'Digite os 11 dígitos do WhatsApp (DDD + número)' });
+      setErrors({ phone: 'Digite um número de WhatsApp válido' });
       return;
     }
     setLoading(true);
@@ -245,16 +244,13 @@ export function AuthPage() {
               <Input
                 id="reg-phone"
                 type="tel"
-                placeholder="11999999999"
+                placeholder="11999999999 (sem espaços)"
                 autoComplete="tel"
                 value={form.phone}
                 onChange={set('phone')}
-                maxLength={11}
-                inputMode="numeric"
                 className={cn(errors.phone && 'border-destructive')}
                 disabled={loading}
               />
-              <p className="text-xs text-muted-foreground">{form.phone.length}/11 dígitos</p>
               {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
             </div>
 
@@ -320,16 +316,13 @@ export function AuthPage() {
                 autoComplete="tel"
                 value={form.phone}
                 onChange={set('phone')}
-                maxLength={11}
-                inputMode="numeric"
                 className={cn(errors.phone && 'border-destructive')}
                 disabled={loading}
               />
-              <p className="text-xs text-muted-foreground">{form.phone.length}/11 dígitos</p>
               {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading || form.phone.length !== 11}>
+            <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
               {loading ? 'Enviando...' : 'Enviar link pelo WhatsApp'}
             </Button>
