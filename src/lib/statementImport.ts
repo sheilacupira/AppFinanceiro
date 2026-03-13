@@ -40,11 +40,11 @@ export interface CsvMapping {
 
 const HEADER_ALIASES = {
   date: ['data', 'date', 'dt', 'dat', 'data_mov'],
-  description: ['descricao', 'historico', 'descricao_trn', 'description', 'memo', 'name'],
+  description: ['descricao', 'historico', 'descricao_trn', 'description', 'memo', 'name', 'lancamento', 'lançamento'],
   amount: ['valor', 'amount', 'value', 'vlr', 'valor_mov'],
   debit: ['debito', 'debit', 'saida'],
   credit: ['credito', 'credit', 'entrada'],
-  type: ['tipo', 'type', 'natureza'],
+  type: ['tipo', 'type', 'natureza', 'tipo lancamento', 'tipo lançamento', 'tipo_lancamento'],
   source: ['origem', 'banco', 'fonte', 'source'],
 };
 
@@ -126,12 +126,22 @@ export const buildDefaultCsvMapping = (preview: CsvPreview): CsvMapping => {
     return normalizedHeader.findIndex((header) => aliases.includes(header));
   };
 
+  // Fallback: busca parcial para lidar com encoding quebrado (ex: "Tipo Lan?amento")
+  const findIndexPartial = (keywords: string[]): number => {
+    return normalizedHeader.findIndex((header) =>
+      keywords.some((kw) => header.includes(kw))
+    );
+  };
+
   const dateIndex = findIndex(HEADER_ALIASES.date);
   const descriptionIndex = findIndex(HEADER_ALIASES.description);
   const amountIndex = findIndex(HEADER_ALIASES.amount);
   const debitIndex = findIndex(HEADER_ALIASES.debit);
   const creditIndex = findIndex(HEADER_ALIASES.credit);
-  const typeIndex = findIndex(HEADER_ALIASES.type);
+  // Para "Tipo Lançamento" com encoding quebrado → busca por "tipo" (parcial)
+  const typeIndex = findIndex(HEADER_ALIASES.type) >= 0
+    ? findIndex(HEADER_ALIASES.type)
+    : findIndexPartial(['tipo', 'tipo lan', 'type']);
   const sourceIndex = findIndex(HEADER_ALIASES.source);
 
   return {
@@ -240,14 +250,24 @@ const detectTransactionType = (description: string, rawType?: string): Transacti
   const desc = description.toLowerCase();
   const normalized = rawType?.toLowerCase().trim() || '';
 
-  // 1. Verificar rawType como CÓDIGO EXPLÍCITO primeiro (C/D, CR/DB, etc.)
-  // Muitos bancos brasileiros usam "C" para crédito e "D" para débito
+  // 1. Verificar rawType como CÓDIGO EXPLÍCITO primeiro (C/D, CR/DB, Entrada/Saída, etc.)
+  // Muitos bancos brasileiros usam "C" para crédito e "D" para débito ou "Entrada"/"Saída"
+  // Nota: arquivos ISO-8859-1 podem ter "Sa�da" em vez de "Saída" — usamos substring match
   if (rawType) {
     const typeCode = rawType.trim().toUpperCase();
-    if (typeCode === 'C' || typeCode === 'CR' || typeCode === 'CRE' || typeCode === 'CREDITO' || typeCode === 'CRÉDITO') {
+    const typeNorm = normalized; // já em lowercase
+    if (
+      typeCode === 'C' || typeCode === 'CR' || typeCode === 'CRE' ||
+      typeCode === 'CREDITO' || typeCode === 'CRÉDITO' ||
+      typeNorm.includes('entrada')
+    ) {
       return 'income';
     }
-    if (typeCode === 'D' || typeCode === 'DB' || typeCode === 'DEB' || typeCode === 'DEBITO' || typeCode === 'DÉBITO') {
+    if (
+      typeCode === 'D' || typeCode === 'DB' || typeCode === 'DEB' ||
+      typeCode === 'DEBITO' || typeCode === 'DÉBITO' ||
+      typeNorm.includes('saida') || typeNorm.includes('sa') && typeNorm.includes('da') && typeNorm.length <= 6
+    ) {
       return 'expense';
     }
   }
@@ -410,8 +430,15 @@ export const parseCsv = (text: string): StatementParseResult => {
   const amountIndex = hasHeader ? findIndex(HEADER_ALIASES.amount) : 2;
   const debitIndex = hasHeader ? findIndex(HEADER_ALIASES.debit) : -1;
   const creditIndex = hasHeader ? findIndex(HEADER_ALIASES.credit) : -1;
-  const typeIndex = hasHeader ? findIndex(HEADER_ALIASES.type) : -1;
+  // Fallback parcial para "Tipo Lançamento" com encoding quebrado (ex: "Tipo Lan?amento")
+  const findIndexPartial = (keywords: string[]): number =>
+    headers.findIndex((h) => keywords.some((kw) => h.includes(kw)));
+  const typeIndexExact = hasHeader ? findIndex(HEADER_ALIASES.type) : -1;
+  const typeIndex = typeIndexExact >= 0 ? typeIndexExact : (hasHeader ? findIndexPartial(['tipo', 'type']) : -1);
   const sourceIndex = hasHeader ? findIndex(HEADER_ALIASES.source) : -1;
+
+  // Palavras que indicam linha de saldo/resumo — devem ser ignoradas
+  const SKIP_DESCRIPTIONS = ['saldo anterior', 'saldo do dia', 's a l d o', 'saldo', 'saldo devedor'];
 
   for (let i = startIndex; i < lines.length; i += 1) {
     const row = parseCsvLine(lines[i], delimiter);
@@ -420,7 +447,15 @@ export const parseCsv = (text: string): StatementParseResult => {
     const rawType = typeIndex >= 0 ? row[typeIndex] : undefined;
     const source = sourceIndex >= 0 ? row[sourceIndex] : undefined;
 
+    // Pular linhas de saldo/resumo do banco
+    const descLower = rawDescription.trim().toLowerCase();
+    if (SKIP_DESCRIPTIONS.some((skip) => descLower === skip || descLower.startsWith('saldo'))) {
+      continue;
+    }
+
     const date = parseDate(rawDate);
+    // Pular linha com data inválida (ex: "00/00/0000")
+    if (!date || rawDate.startsWith('00/00')) continue;
 
     let amount: number | null = null;
     let type: TransactionType = 'expense';
