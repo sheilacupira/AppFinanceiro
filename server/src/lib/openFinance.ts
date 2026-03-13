@@ -107,7 +107,9 @@ class OpenFinanceClient {
   }
 
   async listConnectors(): Promise<Array<{ id: number; name: string; codes?: string[]; imageUrl?: string; primaryColor?: string }>> {
-    return this.request<Array<{ id: number; name: string; codes?: string[]; imageUrl?: string; primaryColor?: string }>>('/connectors?countries=BR');
+    // A Pluggy retorna { results: [...], total, page } — extraímos apenas o array
+    const data = await this.request<{ results: Array<{ id: number; name: string; codes?: string[]; imageUrl?: string; primaryColor?: string }> }>('/connectors?countries=BR');
+    return data.results ?? [];
   }
 
   async getItem(itemId: string): Promise<unknown> {
