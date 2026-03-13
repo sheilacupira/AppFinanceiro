@@ -238,15 +238,26 @@ const EXPENSE_KEYWORDS = [
 
 const detectTransactionType = (description: string, rawType?: string): TransactionType => {
   const desc = description.toLowerCase();
-  const normalized = rawType?.toLowerCase() || '';
+  const normalized = rawType?.toLowerCase().trim() || '';
 
-  // Verificar pela descrição PRIMEIRO (mais confiável que tipo genérico)
-  // Priorizar palavras-chave de INCOME pois são mais específicas (salário, bônus, etc)
+  // 1. Verificar rawType como CÓDIGO EXPLÍCITO primeiro (C/D, CR/DB, etc.)
+  // Muitos bancos brasileiros usam "C" para crédito e "D" para débito
+  if (rawType) {
+    const typeCode = rawType.trim().toUpperCase();
+    if (typeCode === 'C' || typeCode === 'CR' || typeCode === 'CRE' || typeCode === 'CREDITO' || typeCode === 'CRÉDITO') {
+      return 'income';
+    }
+    if (typeCode === 'D' || typeCode === 'DB' || typeCode === 'DEB' || typeCode === 'DEBITO' || typeCode === 'DÉBITO') {
+      return 'expense';
+    }
+  }
+
+  // 2. Verificar pela descrição — palavras-chave de INCOME (salário, bônus, pix recebido, etc.)
   if (INCOME_KEYWORDS.some((token) => desc.includes(token))) {
     return 'income';
   }
 
-  // Verificar rawType (coluna explícita de tipo)
+  // 3. Verificar rawType (coluna explícita de tipo com palavras completas)
   if (rawType) {
     if (INCOME_KEYWORDS.some((token) => normalized.includes(token))) {
       return 'income';
@@ -256,12 +267,12 @@ const detectTransactionType = (description: string, rawType?: string): Transacti
     }
   }
 
-  // Verificar palavras-chave de despesa na descrição
+  // 4. Verificar palavras-chave de despesa na descrição
   if (EXPENSE_KEYWORDS.some((token) => desc.includes(token))) {
     return 'expense';
   }
 
-  // Padrão: assumir "expense" (mais seguro para não deixar despesa como receita)
+  // Padrão: assumir "expense"
   return 'expense';
 };
 
@@ -420,21 +431,16 @@ export const parseCsv = (text: string): StatementParseResult => {
 
       if (credit && credit > 0) {
         amount = credit;
-        // Se tem valor na coluna CRÉDITO, é ENTRADA (a menos que descrição force outro tipo)
-        // Priorizar que crédito = income
-        const detectedType = determineType(credit, rawDescription, rawType);
-        // Se detectou como despesa mas está na coluna crédito, verificar novamente
-        type = detectedType === 'expense' && !EXPENSE_KEYWORDS.some(kw => rawDescription.toLowerCase().includes(kw))
-          ? 'income'
-          : detectedType;
+        // Coluna CRÉDITO = ENTRADA. Só sobrescreve para despesa se a descrição
+        // indicar claramente uma transferência enviada (não recebida)
+        const STRONG_EXPENSE = ['transferencia enviada', 'transferência enviada', 'ted enviada', 'pix enviado'];
+        type = STRONG_EXPENSE.some(kw => rawDescription.toLowerCase().includes(kw)) ? 'expense' : 'income';
       } else if (debit && debit > 0) {
         amount = debit;
-        // Se tem valor na coluna DÉBITO, é SAÍDA (a menos que descrição force entrada)
-        const detectedType = determineType(debit, rawDescription, rawType);
-        // Se detectou como entrada mas está na coluna débito, manter entrada se tiver palavra-chave forte
-        type = detectedType === 'income' 
-          ? 'income' // Manter se detectou salário/bonus/etc
-          : 'expense';
+        // Coluna DÉBITO = SAÍDA. Só sobrescreve para entrada se a descrição
+        // indicar claramente um salário ou rendimento.
+        const STRONG_INCOME = ['salario', 'salário', 'bonus', 'bônus', 'rendimento', 'dividendo', 'reembolso'];
+        type = STRONG_INCOME.some(kw => rawDescription.toLowerCase().includes(kw)) ? 'income' : 'expense';
       }
     }
 
@@ -506,18 +512,12 @@ export const parseCsvWithMapping = (text: string, mapping: CsvMapping): Statemen
 
       if (credit && credit > 0) {
         amount = credit;
-        // Se tem valor na coluna CRÉDITO, é ENTRADA (a menos que descrição force outro tipo)
-        const detectedType = determineType(credit, rawDescription, rawType);
-        type = detectedType === 'expense' && !EXPENSE_KEYWORDS.some(kw => rawDescription.toLowerCase().includes(kw))
-          ? 'income'
-          : detectedType;
+        const STRONG_EXPENSE = ['transferencia enviada', 'transferência enviada', 'ted enviada', 'pix enviado'];
+        type = STRONG_EXPENSE.some(kw => rawDescription.toLowerCase().includes(kw)) ? 'expense' : 'income';
       } else if (debit && debit > 0) {
         amount = debit;
-        // Se tem valor na coluna DÉBITO, é SAÍDA (a menos que descrição force entrada)
-        const detectedType = determineType(debit, rawDescription, rawType);
-        type = detectedType === 'income' 
-          ? 'income' // Manter se detectou salário/bonus/etc
-          : 'expense';
+        const STRONG_INCOME = ['salario', 'salário', 'bonus', 'bônus', 'rendimento', 'dividendo', 'reembolso'];
+        type = STRONG_INCOME.some(kw => rawDescription.toLowerCase().includes(kw)) ? 'income' : 'expense';
       }
     }
 
