@@ -36,22 +36,27 @@ export function BillingManager({ userId, tenantPlan }: BillingManagerProps) {
     try {
       await billingService.initialize();
 
-      const [subData, invoiceData, paymentData] = await Promise.all([
-        billingService.getSubscription(userId),
+      // Subscription é crítico — falha exibe erro
+      const subData = await billingService.getSubscription(userId);
+      setSubscription(subData);
+
+      // Faturas e métodos de pagamento são opcionais — falha silenciosa
+      const [invoiceData, paymentData] = await Promise.allSettled([
         billingService.getInvoices(userId),
         billingService.getPaymentMethods(userId),
       ]);
-
-      setSubscription(subData);
-      setInvoices(invoiceData);
-      setPaymentMethods(paymentData);
+      setInvoices(invoiceData.status === 'fulfilled' ? invoiceData.value : []);
+      setPaymentMethods(paymentData.status === 'fulfilled' ? paymentData.value : []);
     } catch (err) {
-      setError('Erro ao carregar dados de cobrança');
+      // Só exibe erro se falhar ao carregar assinatura E não tiver plano via prop
+      if (!tenantPlan) {
+        setError('Erro ao carregar dados de cobrança');
+      }
       console.error(err);
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, tenantPlan]);
 
   useEffect(() => {
     loadBillingData();
