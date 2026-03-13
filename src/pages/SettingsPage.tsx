@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { BackupManager } from '@/components/BackupManager';
 import { StatementImportManager } from '@/components/StatementImportManager';
-import { BankConnectionManager } from '@/components/BankConnectionManager';
+import { StatementGuide } from '@/components/StatementGuide';
 import { BillingManager } from '@/components/BillingManager';
 import { toast } from 'sonner';
 
@@ -509,13 +509,11 @@ export function SettingsPage() {
       {/* Backup Section */}
       <BackupManager />
 
+      {/* Statement Guide */}
+      <StatementGuide />
+
       {/* Statement Import */}
       <StatementImportManager />
-
-      {/* Open Finance */}
-      <div className="bg-card rounded-lg border border-border p-6">
-        <BankConnectionManager />
-      </div>
 
       {/* Billing */}
       {isSaasMode && session && (
