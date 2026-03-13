@@ -47,50 +47,81 @@ const CATEGORY_DB: CategoryDefinition[] = [
   {
     id: 'food',
     name: 'Alimentação',
-    keywords: ['padaria', 'supermercado', 'mercado', 'açougue', 'pão', 'restaurante', 'pizza', 'hamburger', 'lanchonete', 'café', 'bar', 'boteco', 'churrascaria', 'alimento', 'comida', 'bebida'],
-    merchants: ['pão de açúcar', 'carrefour', 'extra', 'walmart', 'dia', 'prezunic', 'mcdonald', 'burger king', 'subway', 'starbucks', 'ifood', 'rappi'],
+    keywords: ['padaria', 'supermercado', 'mercado', 'açougue', 'pão', 'restaurante', 'pizza', 'hamburger', 'lanchonete', 'café', 'bar', 'boteco', 'churrascaria', 'alimento', 'comida', 'bebida', 'hortifruti', 'mercearia', 'panificadora'],
+    merchants: ['pão de açúcar', 'carrefour', 'extra', 'walmart', 'dia', 'prezunic', 'mcdonald', 'burger king', 'subway', 'starbucks', 'ifood', 'rappi', 'assai', 'atacadao', 'nordestao', 'bom preco', 'g barbosa'],
   },
   {
     id: 'health',
     name: 'Saúde',
-    keywords: ['farmácia', 'farmacia', 'pharmacy', 'medicamento', 'remédio', 'droga', 'drogaria', 'médico', 'medico', 'consulta', 'hospital', 'clinica', 'clínica', 'dentista', 'oftalmologista', 'plano de saude'],
-    merchants: ['drogasil', 'drogaria sao paulo', 'farmais', 'drogaria paulista', 'pague menos'],
+    keywords: ['farmácia', 'farmacia', 'pharmacy', 'medicamento', 'remédio', 'droga', 'drogaria', 'médico', 'medico', 'consulta', 'hospital', 'clinica', 'clínica', 'dentista', 'oftalmologista', 'plano de saude', 'convenio', 'convênio', 'exame', 'laboratorio', 'laborató'],
+    merchants: ['drogasil', 'drogaria sao paulo', 'farmais', 'drogaria paulista', 'pague menos', 'ultrafarma', 'droga raia'],
   },
   {
     id: 'education',
     name: 'Educação',
-    keywords: ['escola', 'faculdade', 'universidade', 'cursos', 'curso', 'livro', 'livraria', 'educação', 'educacao', 'aula', 'professor', 'mensalidade', 'enem', 'vestibular', 'material escolar'],
+    keywords: ['escola', 'faculdade', 'universidade', 'cursos', 'curso', 'livro', 'livraria', 'educação', 'educacao', 'aula', 'professor', 'mensalidade escolar', 'enem', 'vestibular', 'material escolar', 'colegio', 'colégio'],
     merchants: ['biblioteca', 'saraiva', 'estante magica', 'udemy', 'coursera', 'alura'],
   },
   {
     id: 'transport',
     name: 'Transporte',
-    keywords: ['uber', 'taxi', 'táxi', 'ônibus', 'onibus', 'metro', 'combustível', 'combustivel', 'gasolina', 'diesel', 'alcool', 'álcool', 'estacionamento', 'metrô', 'passagem', 'transporte'],
-    merchants: ['shell', 'br', 'esso', 'chevron', 'ipiranga', '99taxi', 'beat', 'posto'],
+    keywords: ['uber', 'taxi', 'táxi', 'ônibus', 'onibus', 'metro', 'combustível', 'combustivel', 'gasolina', 'diesel', 'alcool', 'álcool', 'estacionamento', 'metrô', 'passagem', 'transporte', 'saque dinheiro', 'banco 24h', 'carro', 'automovel', 'automóvel'],
+    merchants: ['shell', 'br distribuidora', 'esso', 'chevron', 'ipiranga', '99taxi', 'beat', 'posto', 'north shop'],
   },
   {
     id: 'bills',
     name: 'Contas',
-    keywords: ['água', 'agua', 'luz', 'eletricidade', 'eletrica', 'energia', 'telefone', 'internet', 'gas', 'gás', 'conta', 'fatura', 'utilidade'],
-    merchants: ['cemig', 'copasa', 'companhia de gás', 'vivo', 'claro', 'oi', 'tim', 'embratel', 'net'],
+    keywords: ['água', 'agua', 'luz', 'eletricidade', 'eletrica', 'energia', 'telefone', 'internet', 'gas', 'gás', 'conta', 'fatura', 'utilidade', 'iof', 'iptu', 'ipva', 'boleto', 'cobran', 'pre-pago', 'recarga', 'celular pre'],
+    merchants: ['cemig', 'copasa', 'companhia de gás', 'vivo', 'claro', 'oi', 'tim', 'embratel', 'net', 'neoenergia', 'coelce', 'celpe', 'equatorial'],
   },
   {
     id: 'entertainment',
     name: 'Lazer',
-    keywords: ['netflix', 'spotify', 'cinema', 'filme', 'teatro', 'show', 'concerto', 'musica', 'música', 'jogos', 'jogo', 'game', 'streaming', 'disney', 'hbo', 'amazon prime', 'lazer', 'diversao'],
+    keywords: ['netflix', 'spotify', 'cinema', 'filme', 'teatro', 'show', 'concerto', 'musica', 'música', 'jogos', 'jogo', 'game', 'streaming', 'disney', 'hbo', 'amazon prime', 'lazer', 'diversao', 'viagem', 'hotel', 'pousada', 'turismo'],
     merchants: ['ingresso', 'sympla', 'cinemark', 'cinesystem', 'playstation', 'xbox', 'prime video'],
   },
   {
     id: 'shopping',
     name: 'Compras',
-    keywords: ['roupa', 'roupas', 'sapato', 'calçado', 'calcado', 'moda', 'loja', 'boutique', 'vestuario', 'amazon', 'mercado livre', 'compra', 'shop', 'store', 'online'],
-    merchants: ['renner', 'riachuelo', 'forum', 'zara', 'hm', 'adidas', 'nike', 'amazon', 'mercado livre', 'shopee', 'shein', 'aliexpress'],
+    keywords: ['roupa', 'roupas', 'sapato', 'calçado', 'calcado', 'moda', 'loja', 'boutique', 'vestuario', 'amazon', 'mercado livre', 'shop', 'store', 'online', 'moda mundial', 'rei do terno', 'cea pay'],
+    merchants: ['renner', 'riachuelo', 'forum', 'zara', 'hm', 'adidas', 'nike', 'amazon', 'mercado livre', 'shopee', 'shein', 'aliexpress', 'c&a'],
   },
   {
     id: 'credit-card',
-    name: 'Cartão',
-    keywords: ['cartao', 'cartão', 'fatura', 'juros', 'taxa', 'anuidade', 'pagamento cartao', 'visa', 'mastercard'],
-    merchants: [],
+    name: 'Cartão de Crédito',
+    keywords: [
+      // BB
+      'pagto cart', 'pagamento cartao', 'pagamento cartão', 'pagto cartao', 'pagto cartão',
+      // Genérico
+      'fatura cartao', 'fatura cartão', 'fatura nubank', 'fatura c6', 'fatura inter',
+      'cartao credito', 'cartão crédito', 'cartao de credito', 'cartão de crédito',
+      'visa', 'mastercard', 'anuidade', 'juros cartao',
+    ],
+    merchants: ['nubank', 'c6 bank', 'inter'],
+  },
+  {
+    id: 'financing',
+    name: 'Financiamento',
+    keywords: [
+      'financiamento', 'prestacao', 'prestação', 'parcela', 'siac', 'cielo',
+      'financ imovel', 'financ imóvel', 'credito imobi', 'crédito imobi',
+      'caixa econo', 'cef ', 'banco do brasil habi', 'bb hab',
+      'consorcio', 'consórcio', 'leasing', 'finame',
+      'gravata empreend', 'empreendimento', 'imobil',
+    ],
+    merchants: ['caixa economica', 'cef', 'bb imobiliario'],
+  },
+  {
+    id: 'housing',
+    name: 'Moradia',
+    keywords: ['aluguel', 'condominio', 'condomínio', 'reforma', 'construcao', 'construção', 'casa', 'apartamento', 'imovel', 'imóvel', 'manutencao', 'manutenção', 'pintura', 'eletricista', 'encanador'],
+    merchants: ['loja de material', 'leroy merlin', 'telhanorte', 'c&c', 'dicico'],
+  },
+  {
+    id: 'investment',
+    name: 'Investimento',
+    keywords: ['rende facil', 'rende fácil', 'bb rende', 'poupanca', 'poupança', 'cdb', 'lci', 'lca', 'tesouro', 'fundo', 'aplicacao', 'aplicação', 'investimento', 'acao', 'ações', 'bolsa'],
+    merchants: ['xp investimentos', 'rico', 'clear', 'btg', 'nubank'],
   },
 ];
 
@@ -159,8 +190,8 @@ export const categorizeTransaction = (description: string): CategorizeResult => 
     .filter((r) => r.confidence > 0);
 
   const topMatch = results[0] || {
-    categoryId: 'compras',
-    categoryName: 'Compras',
+    categoryId: 'other-expense',
+    categoryName: 'Outros (Saída)',
     confidence: 0,
   };
 

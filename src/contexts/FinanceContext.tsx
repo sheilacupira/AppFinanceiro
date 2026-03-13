@@ -110,6 +110,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           { id: 'entertainment', name: 'Lazer', type: 'expense', icon: '🎬' },
           { id: 'shopping', name: 'Compras', type: 'expense', icon: '🛍️' },
           { id: 'bills', name: 'Contas', type: 'expense', icon: '📄' },
+          { id: 'credit-card', name: 'Cartão de Crédito', type: 'expense', icon: '💳' },
+          { id: 'financing', name: 'Financiamento', type: 'expense', icon: '🏗️' },
           { id: 'consortium', name: 'Consórcio', type: 'expense', icon: '🏦' },
           { id: 'other-expense', name: 'Outros (Saída)', type: 'expense', icon: '💸' },
         ],

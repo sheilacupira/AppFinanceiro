@@ -1,7 +1,7 @@
 import { AppData, Transaction, Recurrence, Category, Settings } from '@/types/finance';
 
 const STORAGE_KEY_PREFIX = 'financeiro_data';
-const CURRENT_SCHEMA_VERSION = 1;
+const CURRENT_SCHEMA_VERSION = 2;
 
 let currentTenantId: string | undefined = undefined;
 
@@ -34,6 +34,8 @@ const defaultCategories: Category[] = [
   { id: 'entertainment', name: 'Lazer', type: 'expense', icon: '🎬' },
   { id: 'shopping', name: 'Compras', type: 'expense', icon: '🛍️' },
   { id: 'bills', name: 'Contas', type: 'expense', icon: '📄' },
+  { id: 'credit-card', name: 'Cartão de Crédito', type: 'expense', icon: '💳' },
+  { id: 'financing', name: 'Financiamento', type: 'expense', icon: '🏗️' },
   { id: 'consortium', name: 'Consórcio', type: 'expense', icon: '🏦' },
   { id: 'other-expense', name: 'Outros (Saída)', type: 'expense', icon: '💸' },
 ];
@@ -63,7 +65,17 @@ export function loadData(): AppData {
       return defaultData;
     }
     const data = JSON.parse(stored) as AppData;
-    // Migration logic can go here if schema changes
+    // Migration v1 → v2: add credit-card and financing categories
+    if (!data.schemaVersion || data.schemaVersion < 2) {
+      const existingIds = new Set(data.categories.map((c) => c.id));
+      const newCats = [
+        { id: 'credit-card', name: 'Cartão de Crédito', type: 'expense' as const, icon: '💳' },
+        { id: 'financing', name: 'Financiamento', type: 'expense' as const, icon: '🏗️' },
+      ];
+      newCats.forEach((c) => { if (!existingIds.has(c.id)) data.categories.push(c); });
+      data.schemaVersion = 2;
+      saveData(data);
+    }
     return data;
   } catch {
     return getDefaultData();
