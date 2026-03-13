@@ -28,7 +28,10 @@ export function AuthPage() {
   const [errors, setErrors] = useState<Partial<typeof form>>({});
 
   const set = (field: keyof typeof form) => (e: ChangeEvent<HTMLInputElement>) => {
-    setForm((prev) => ({ ...prev, [field]: e.target.value }));
+    const value = field === 'phone'
+      ? e.target.value.replace(/\D/g, '').slice(0, 11)
+      : e.target.value;
+    setForm((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => ({ ...prev, [field]: '' }));
   };
 
@@ -244,8 +247,10 @@ export function AuthPage() {
               <Input
                 id="reg-phone"
                 type="tel"
-                placeholder="11999999999 (sem espaços)"
+                placeholder="11999999999"
                 autoComplete="tel"
+                inputMode="numeric"
+                maxLength={11}
                 value={form.phone}
                 onChange={set('phone')}
                 className={cn(errors.phone && 'border-destructive')}
@@ -314,6 +319,8 @@ export function AuthPage() {
                 type="tel"
                 placeholder="11999999999"
                 autoComplete="tel"
+                inputMode="numeric"
+                maxLength={11}
                 value={form.phone}
                 onChange={set('phone')}
                 className={cn(errors.phone && 'border-destructive')}
