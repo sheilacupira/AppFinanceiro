@@ -216,18 +216,27 @@ const INCOME_KEYWORDS = [
   'bonus', 'bônus', 'gratificacao', 'gratificação', 'premio', 'prêmio',
   '13 salario', '13º salario', '13º salário', 'decimo terceiro', 'décimo terceiro',
   // Transferências e depósitos recebidos
-  'deposito', 'depósito', 'transferencia recebida', 'transferência recebida', 
-  'ted recebida', 'pix recebido', 'doc recebido', 'receb ted', 'receb pix', 'receb doc',
+  'deposito', 'depósito', 'dep ', 'dep.',
+  'transferencia recebida', 'transferência recebida',
+  'ted recebida', 'ted receb', 'doc receb',
+  'pix recebido', 'pix receb', 'pix - recebido', 'pix-recebido',
+  'doc recebido', 'receb ted', 'receb pix', 'receb doc',
   'cred em conta', 'credito em conta', 'crédito em conta',
-  // Rendimentos e investimentos
-  'rendimento', 'juros', 'interest', 'dividendo', 'dividend', 'lucro', 'yield',
-  'aluguel recebido', 'aluguel', 'renda imovel', 'renda imóvel', 'locacao', 'locação',
+  'cred.', 'crédito em c/c',
+  // Rendimentos e investimentos (BB, Itaú, Bradesco)
+  'rendimento', 'rende facil', 'rende fácil', 'bb rende',
+  'juros', 'interest', 'dividendo', 'dividend', 'lucro', 'yield',
+  'resgate', 'aplicacao resgatada', 'aplicação resgatada',
+  'aluguel recebido', 'renda imovel', 'renda imóvel', 'locacao', 'locação',
   // Devoluções e reembolsos
   'reembolso', 'reembolsado', 'devolucao', 'devolução', 'refund', 'estorno',
+  'chargeback', 'cashback',
   // Vendas e trabalho autônomo
   'venda', 'sale', 'recebimento', 'recebido', 'received', 'pagto recebido',
   'freelance', 'freela', 'autonomo', 'autônomo', 'servico prestado', 'serviço prestado',
-  'honorarios', 'honorários', 'consultoria', 'projeto', 'trabalho autonomo', 'trabalho autônomo',
+  'honorarios', 'honorários', 'consultoria',
+  // Nubank / fintechs (positive values with these descriptions)
+  'nubank', 'money added', 'added to account',
   // Entrada genérica
   'entrada', 'receita', 'income', 'credit', 'credito', 'crédito',
   'deposito em conta', 'depósito em conta',
@@ -235,64 +244,55 @@ const INCOME_KEYWORDS = [
 
 const EXPENSE_KEYWORDS = [
   // Pagamentos gerais
-  'pagamento', 'payment', 'pago', 'paid',
+  'pagamento', 'pagto', 'payment', 'pago', 'paid',
   // Débito
-  'debito', 'débito', 'debit', 'saida', 'saída',
+  'debito', 'débito', 'debit', 'saida', 'saída', 'deb.',
   // Compras
-  'compra', 'purchase', 'comprado',
+  'compra', 'purchase', 'comprado', 'compra cartao', 'compra cartão',
   // Despesa
   'despesa', 'expense', 'gasto',
   // Transferências enviadas
-  'transferencia enviada', 'transferência enviada', 'ted enviada',
+  'transferencia enviada', 'transferência enviada',
+  'ted enviada', 'doc enviado',
+  'pix enviado', 'pix - enviado', 'pix-enviado',
+  // Saques
+  'saque', 'retirada', 'withdrawal',
+  // Tarifas e encargos
+  'tarifa', 'taxa', 'tarifa bancaria', 'tarifa bancária', 'iof', 'cpmf',
+  'cobran', // "cobrança" parcial — cobre encoding quebrado
 ];
+
+// Palavras na coluna "Tipo" que indicam crédito (entrada)
+const TYPE_INCOME = ['entrada', 'credito', 'crédito', 'credit', 'c', 'cr', 'cre'];
+// Palavras na coluna "Tipo" que indicam débito (saída)
+const TYPE_EXPENSE = ['saida', 'saída', 'debito', 'débito', 'debit', 'd', 'db', 'deb', 'sai'];
 
 const detectTransactionType = (description: string, rawType?: string): TransactionType => {
   const desc = description.toLowerCase();
-  const normalized = rawType?.toLowerCase().trim() || '';
+  const typeNorm = rawType?.toLowerCase().trim() || '';
 
-  // 1. Verificar rawType como CÓDIGO EXPLÍCITO primeiro (C/D, CR/DB, Entrada/Saída, etc.)
-  // Muitos bancos brasileiros usam "C" para crédito e "D" para débito ou "Entrada"/"Saída"
-  // Nota: arquivos ISO-8859-1 podem ter "Sa�da" em vez de "Saída" — usamos substring match
+  // 1. Coluna de tipo explícita (mais confiável)
+  // Suporta: "C"/"D", "CR"/"DB", "Entrada"/"Saída", "Crédito"/"Débito" e encoding quebrado
   if (rawType) {
     const typeCode = rawType.trim().toUpperCase();
-    const typeNorm = normalized; // já em lowercase
-    if (
-      typeCode === 'C' || typeCode === 'CR' || typeCode === 'CRE' ||
-      typeCode === 'CREDITO' || typeCode === 'CRÉDITO' ||
-      typeNorm.includes('entrada')
-    ) {
-      return 'income';
-    }
-    if (
-      typeCode === 'D' || typeCode === 'DB' || typeCode === 'DEB' ||
-      typeCode === 'DEBITO' || typeCode === 'DÉBITO' ||
-      typeNorm.includes('saida') || typeNorm.includes('sa') && typeNorm.includes('da') && typeNorm.length <= 6
-    ) {
-      return 'expense';
-    }
+    if (TYPE_INCOME.includes(typeCode.toLowerCase())) return 'income';
+    if (TYPE_EXPENSE.includes(typeCode.toLowerCase())) return 'expense';
+    // Partial match: "Entrada"→income, "Saída"/"Sa?da"/"Sa\xedda"→expense
+    if (typeNorm.includes('entr') || typeNorm.includes('cred')) return 'income';
+    if (typeNorm.startsWith('sa') || typeNorm.includes('deb') || typeNorm.includes('said')) return 'expense';
   }
 
-  // 2. Verificar pela descrição — palavras-chave de INCOME (salário, bônus, pix recebido, etc.)
+  // 2. Palavras-chave de INCOME na descrição
   if (INCOME_KEYWORDS.some((token) => desc.includes(token))) {
     return 'income';
   }
 
-  // 3. Verificar rawType (coluna explícita de tipo com palavras completas)
-  if (rawType) {
-    if (INCOME_KEYWORDS.some((token) => normalized.includes(token))) {
-      return 'income';
-    }
-    if (EXPENSE_KEYWORDS.some((token) => normalized.includes(token))) {
-      return 'expense';
-    }
-  }
-
-  // 4. Verificar palavras-chave de despesa na descrição
+  // 3. Palavras-chave de EXPENSE na descrição
   if (EXPENSE_KEYWORDS.some((token) => desc.includes(token))) {
     return 'expense';
   }
 
-  // Padrão: assumir "expense"
+  // Padrão: despesa
   return 'expense';
 };
 

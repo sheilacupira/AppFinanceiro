@@ -85,7 +85,18 @@ export function StatementImportManager() {
     setShowMapping(false);
 
     try {
-      const text = await file.text();
+      // Tenta UTF-8 primeiro; se tiver caracteres quebrados (ISO-8859-1), relê com encoding correto
+      let text = await file.text();
+      const hasReplacementChar = text.includes('\uFFFD');
+      const hasBrokenLatinChars = /[A-Za-z][?][a-z]/.test(text); // padrão de acento quebrado: "Sa?da"
+      if (hasReplacementChar || hasBrokenLatinChars) {
+        text = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target?.result as string ?? '');
+          reader.onerror = reject;
+          reader.readAsText(file, 'ISO-8859-1');
+        });
+      }
       const detectedFormat = detectFormat(file.name, text);
       setRawText(text);
       setFormat(detectedFormat);
